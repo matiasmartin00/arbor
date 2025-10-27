@@ -60,7 +60,18 @@ func main() {
 		}
 
 		fmt.Println("Commit created with hash:", commitHash)
+	case "log":
+		if err := repo.EnsureRepo("."); err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
+
+		if err := repo.Log("."); err != nil {
+			fmt.Println("Error displaying log:", err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Println("Unknown command:", command)
+		os.Exit(1)
 	}
 }
