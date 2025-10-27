@@ -18,7 +18,15 @@ func HashObject(data []byte, objType string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func WriteObject(repoPath string, data []byte, objType string) (string, error) {
+func WriteBlob(repoPath string, data []byte) (string, error) {
+	return writeObject(repoPath, data, "blob")
+}
+
+func WriteTree(repoPath string, data []byte) (string, error) {
+	return writeObject(repoPath, data, "tree")
+}
+
+func writeObject(repoPath string, data []byte, objType string) (string, error) {
 	hash := HashObject(data, objType)
 	dir := utils.GetObjectsDir(repoPath)
 	objDir := filepath.Join(dir, hash[:2])
