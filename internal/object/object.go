@@ -26,6 +26,10 @@ func WriteTree(repoPath string, data []byte) (string, error) {
 	return writeObject(repoPath, data, "tree")
 }
 
+func WriteCommit(repoPath string, data []byte) (string, error) {
+	return writeObject(repoPath, data, "commit")
+}
+
 func writeObject(repoPath string, data []byte, objType string) (string, error) {
 	hash := HashObject(data, objType)
 	dir := utils.GetObjectsDir(repoPath)

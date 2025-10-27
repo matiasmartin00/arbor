@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/matiasmartin00/arbor/internal/repo"
 )
@@ -40,6 +41,25 @@ func main() {
 		}
 
 		fmt.Println("File added with hash:", hash)
+	case "commit":
+		if len(os.Args) < 4 || os.Args[2] != "-m" {
+			fmt.Println("Usage: arbor commit -m <message>")
+			os.Exit(1)
+		}
+
+		msg := strings.Join(os.Args[3:], " ")
+		if err := repo.EnsureRepo("."); err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
+
+		commitHash, err := repo.Commit(".", msg)
+		if err != nil {
+			fmt.Println("Error creating commit:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Commit created with hash:", commitHash)
 	default:
 		fmt.Println("Unknown command:", command)
 	}
