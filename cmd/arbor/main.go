@@ -23,6 +23,23 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("Repository initialized.")
+	case "add":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: arbor add <file>")
+			os.Exit(1)
+		}
+		if err := repo.EnsureRepo("."); err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
+
+		hash, err := repo.Add(".", os.Args[2])
+		if err != nil {
+			fmt.Println("Error adding file:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("File added with hash:", hash)
 	default:
 		fmt.Println("Unknown command:", command)
 	}
