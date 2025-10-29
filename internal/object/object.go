@@ -12,10 +12,14 @@ import (
 
 // HashObject takes the data and its type (e.g., "blob", "tree", "commit")
 // and returns the SHA-1 hash of the object as a hexadecimal string.
-func HashObject(data []byte, objType string) string {
+func hashObject(data []byte, objType string) string {
 	storeData := createObject(data, objType)
 	h := sha1.Sum(storeData)
 	return hex.EncodeToString(h[:])
+}
+
+func HashBlob(data []byte) string {
+	return hashObject(data, "blob")
 }
 
 func WriteBlob(repoPath string, data []byte) (string, error) {
@@ -31,7 +35,7 @@ func WriteCommit(repoPath string, data []byte) (string, error) {
 }
 
 func writeObject(repoPath string, data []byte, objType string) (string, error) {
-	hash := HashObject(data, objType)
+	hash := hashObject(data, objType)
 	dir := utils.GetObjectsDir(repoPath)
 	objDir := filepath.Join(dir, hash[:2])
 	if err := utils.CreateDir(objDir); err != nil {
@@ -49,6 +53,43 @@ func writeObject(repoPath string, data []byte, objType string) (string, error) {
 		return "", err
 	}
 	return hash, nil
+}
+
+func ReadCommit(repoPath, hash string) ([]byte, error) {
+	data, objType, err := ReadObject(repoPath, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	if objType != "commit" {
+		return nil, fmt.Errorf("object %s is not a commit", hash)
+	}
+
+	return data, nil
+}
+
+func ReadBlob(repoPath, hash string) ([]byte, error) {
+	data, objType, err := ReadObject(repoPath, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	if objType != "blob" {
+		return nil, fmt.Errorf("object %s is not a blob", hash)
+	}
+	return data, nil
+}
+
+func ReadTree(repoPath, hash string) ([]byte, error) {
+	data, objType, err := ReadObject(repoPath, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	if objType != "tree" {
+		return nil, fmt.Errorf("object %s is not a tree", hash)
+	}
+	return data, nil
 }
 
 func ReadObject(repoPath, hash string) ([]byte, string, error) {

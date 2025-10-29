@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -46,4 +47,13 @@ func WriteFile(path string, data []byte) error {
 
 func ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
+}
+
+func RemoveFile(path string) error {
+	if _, err := os.Stat(path); err == nil {
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("remove %s: %w", path, err)
+		}
+	}
+	return nil
 }

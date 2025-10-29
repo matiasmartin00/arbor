@@ -69,6 +69,24 @@ func main() {
 			fmt.Println("Error displaying log:", err)
 			os.Exit(1)
 		}
+	case "checkout":
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: arbor checkout <commit-hash>")
+			os.Exit(1)
+		}
+
+		if err := repo.EnsureRepo("."); err != nil {
+			fmt.Println("Error:", err)
+			os.Exit(1)
+		}
+
+		commitHash := os.Args[2]
+		if err := repo.Checkout(".", commitHash); err != nil {
+			fmt.Println("Error during checkout:", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Checked out commit:", commitHash)
 	default:
 		fmt.Println("Unknown command:", command)
 		os.Exit(1)

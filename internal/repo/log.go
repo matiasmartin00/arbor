@@ -51,13 +51,9 @@ func Log(repoPath string) error {
 	}
 
 	for len(hash) > 0 {
-		data, typ, err := object.ReadObject(repoPath, hash)
+		data, err := object.ReadCommit(repoPath, hash)
 		if err != nil {
 			return err
-		}
-
-		if typ != "commit" {
-			return fmt.Errorf("expected commit object, got %s", typ)
 		}
 
 		hmap, msg, err := parseCommit(data)
