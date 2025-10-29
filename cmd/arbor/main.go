@@ -127,8 +127,16 @@ func main() {
 				os.Exit(1)
 			}
 
-			fmt.Println("Not implemented yet.")
-			os.Exit(1)
+			branches, err := branch.ListBranches(".")
+			if err != nil {
+				fmt.Println("Error listing branches:", err)
+				os.Exit(1)
+			}
+
+			fmt.Println("Branches:")
+			for _, b := range branches {
+				fmt.Println(" -", b)
+			}
 		default:
 			fmt.Println("Unknown branch command:", subcommand)
 			os.Exit(1)

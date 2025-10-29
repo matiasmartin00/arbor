@@ -20,6 +20,10 @@ func readHEAD(repoPath string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
+func GetHEAD(repoPath string) (string, error) {
+	return readHEAD(repoPath)
+}
+
 func GetRefHash(repoPath string) (string, error) {
 	head, err := readHEAD(repoPath)
 	if err != nil {

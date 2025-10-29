@@ -2,9 +2,13 @@ package branch
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/matiasmartin00/arbor/internal/refs"
+	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
 var (
@@ -39,4 +43,48 @@ func CreateBranch(repoPath, name string) (string, error) {
 	}
 
 	return name, nil
+}
+
+// listBranches returns a list of branch names and mark the current one with '*'
+func ListBranches(repoPath string) ([]string, error) {
+	refsDir := utils.GetRefsDir(repoPath)
+	headRaw, err := refs.GetHEAD(repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var branches []string
+	err = filepath.WalkDir(refsDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
+
+		if d.IsDir() {
+			return nil
+		}
+
+		rel, _ := filepath.Rel(refsDir, path)
+		branches = append(branches, filepath.ToSlash(rel))
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var current string
+	if refs.IsRef(headRaw) {
+		current = strings.TrimPrefix(headRaw, "refs/heads/")
+	}
+
+	for i, b := range branches {
+		if b == current {
+			branches[i] = "* " + b
+		}
+	}
+
+	return branches, nil
 }
