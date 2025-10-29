@@ -8,8 +8,10 @@ import (
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
+const headFile = "HEAD"
+
 func readHEAD(repoPath string) (string, error) {
-	headPath := utils.GetHeadPath(repoPath)
+	headPath := getHeadPath(repoPath)
 	data, err := utils.ReadFile(headPath)
 	if err != nil {
 		return "", err
@@ -45,4 +47,17 @@ func UpdateRef(repoPath, hash string) error {
 	refPath := filepath.Join(utils.GetRepoDir(repoPath), head)
 
 	return utils.WriteFile(refPath, []byte(hash+"\n"))
+}
+
+func UpdateHEAD(repoPath, ref string) error {
+	headPath := getHeadPath(repoPath)
+	return utils.WriteFile(headPath, []byte(ref+"\n"))
+}
+
+func IsRef(head string) bool {
+	return strings.HasPrefix(head, "refs/")
+}
+
+func getHeadPath(path string) string {
+	return filepath.Join(utils.GetRepoDir(path), headFile)
 }

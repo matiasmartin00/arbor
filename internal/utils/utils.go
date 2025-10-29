@@ -7,7 +7,6 @@ import (
 )
 
 const repoDir = ".arbor"
-const headFile = "HEAD"
 const objectsDir = "objects"
 const indexDir = "index"
 const refsDir = "refs/heads"
@@ -26,10 +25,6 @@ func GetObjectsDir(path string) string {
 
 func GetIndexPath(path string) string {
 	return filepath.Join(GetRepoDir(path), indexDir)
-}
-
-func GetHeadPath(path string) string {
-	return filepath.Join(GetRepoDir(path), headFile)
 }
 
 func GetRefsDir(path string) string {

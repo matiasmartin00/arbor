@@ -6,6 +6,7 @@ import (
 
 	"github.com/matiasmartin00/arbor/internal/index"
 	"github.com/matiasmartin00/arbor/internal/object"
+	"github.com/matiasmartin00/arbor/internal/refs"
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
@@ -20,8 +21,7 @@ func Init(path string) error {
 			return err
 		}
 	}
-	headPath := utils.GetHeadPath(path)
-	return utils.WriteFile(headPath, []byte("refs/heads/main"))
+	return refs.UpdateHEAD(path, "refs/heads/main")
 }
 
 // EnsureRepo checks if the given path is a valid arbor repository.
