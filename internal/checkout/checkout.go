@@ -10,6 +10,7 @@ import (
 	"github.com/matiasmartin00/arbor/internal/object"
 	"github.com/matiasmartin00/arbor/internal/refs"
 	"github.com/matiasmartin00/arbor/internal/repo"
+	"github.com/matiasmartin00/arbor/internal/tree"
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
@@ -43,25 +44,7 @@ func checkout(repoPath, commitHash string) error {
 	}
 
 	// read commit object
-	data, err := object.ReadCommit(repoPath, commitHash)
-	if err != nil {
-		return err
-	}
-
-	// parse commit to get tree hash
-	parts := strings.SplitN(string(data), "\n\n", 2)
-	headers := strings.Split(parts[0], "\n")
-	var treeHash string
-	for _, header := range headers {
-		if strings.HasPrefix(header, "tree ") {
-			treeHash = strings.TrimSpace(strings.TrimPrefix(header, "tree "))
-			break
-		}
-	}
-
-	if len(treeHash) == 0 {
-		return fmt.Errorf("invalid commit object: no tree found")
-	}
+	treeHash, err := tree.GetTreeHashFromCommitHash(repoPath, commitHash)
 
 	// apply tree to working directory
 	err = applyTree(repoPath, treeHash, "")
@@ -71,7 +54,7 @@ func checkout(repoPath, commitHash string) error {
 
 	// build map[path]hash for entire in the tree
 	treeMap := make(map[string]string)
-	if err := fillPathMapFromTree(repoPath, treeHash, "", treeMap); err != nil {
+	if err := tree.FillPathMapFromTree(repoPath, treeHash, "", treeMap); err != nil {
 		return err
 	}
 
@@ -157,47 +140,5 @@ func applyTree(repoPath, treeHash, basePath string) error {
 			}
 		}
 	}
-	return nil
-}
-
-// fillPathMapFromTree fills pathMap with entries path->blobHash using the tree recursively.
-// paths returned use OS-specific separators.
-func fillPathMapFromTree(repoPath, treeHash, basePath string, pathMap map[string]string) error {
-	data, err := object.ReadTree(repoPath, treeHash)
-	if err != nil {
-		return err
-	}
-
-	scanner := bufio.NewScanner(strings.NewReader(string(data)))
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.SplitN(line, " ", 3)
-		if len(parts) != 3 {
-			continue
-		}
-
-		typ := parts[0]
-		hash := parts[1]
-		path := parts[2]
-
-		if typ == "blob" {
-			fullPath := filepath.FromSlash(filepath.Join(basePath, path))
-			pathMap[fullPath] = hash
-			continue
-		}
-
-		if typ == "tree" {
-			// recurse into subtree
-			subBasePath := filepath.Join(basePath, path)
-			if err := fillPathMapFromTree(repoPath, hash, subBasePath, pathMap); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
 	return nil
 }

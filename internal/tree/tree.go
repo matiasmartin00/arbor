@@ -1,6 +1,7 @@
 package tree
 
 import (
+	"bufio"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -81,4 +82,68 @@ func writeTreeRecursive(repoPath string, entries map[string]string, prefix strin
 	}
 
 	return object.WriteTree(repoPath, content)
+}
+
+// fillPathMapFromTree fills pathMap with entries path->blobHash using the tree recursively.
+// paths returned use OS-specific separators.
+func FillPathMapFromTree(repoPath, treeHash, basePath string, pathMap map[string]string) error {
+	data, err := object.ReadTree(repoPath, treeHash)
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, " ", 3)
+		if len(parts) != 3 {
+			continue
+		}
+
+		typ := parts[0]
+		hash := parts[1]
+		path := parts[2]
+
+		if typ == "blob" {
+			fullPath := filepath.FromSlash(filepath.Join(basePath, path))
+			pathMap[fullPath] = hash
+			continue
+		}
+
+		if typ == "tree" {
+			// recurse into subtree
+			subBasePath := filepath.Join(basePath, path)
+			if err := FillPathMapFromTree(repoPath, hash, subBasePath, pathMap); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetTreeHashFromCommitHash(repoPath, commitHash string) (string, error) {
+	data, err := object.ReadCommit(repoPath, commitHash)
+	if err != nil {
+		return "", err
+	}
+
+	parts := strings.SplitN(string(data), "\n\n", 2)
+	headers := strings.Split(parts[0], "\n")
+	var treeHash string
+	for _, h := range headers {
+		if strings.HasPrefix(h, "tree ") {
+			treeHash = strings.TrimSpace(strings.TrimPrefix(h, "tree "))
+			break
+		}
+	}
+	if len(treeHash) == 0 {
+		return "", fmt.Errorf("nvalid commit object (%s) no tree found", commitHash)
+	}
+
+	return treeHash, nil
 }

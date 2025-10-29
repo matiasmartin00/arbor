@@ -28,6 +28,7 @@ func NewRootCommand() *cobra.Command {
 		NewLogCommand(),
 		NewCheckoutCommand(),
 		NewBranchCommand(),
+		NewStatusCommand(),
 	)
 
 	return cmd

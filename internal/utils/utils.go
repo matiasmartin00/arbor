@@ -11,6 +11,10 @@ const objectsDir = "objects"
 const indexDir = "index"
 const refsDir = "refs/heads"
 
+func IsRepoDir(name string) bool {
+	return repoDir == name
+}
+
 func CreateDir(path string) error {
 	return os.MkdirAll(path, 0755)
 }
