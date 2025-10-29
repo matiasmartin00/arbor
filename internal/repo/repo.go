@@ -21,7 +21,7 @@ func Init(path string) error {
 			return err
 		}
 	}
-	return refs.UpdateHEAD(path, "refs/heads/main")
+	return refs.UpdateHEAD(path, "main")
 }
 
 // EnsureRepo checks if the given path is a valid arbor repository.

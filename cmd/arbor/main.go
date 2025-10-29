@@ -78,7 +78,7 @@ func main() {
 		}
 	case "checkout":
 		if len(os.Args) < 3 {
-			fmt.Println("Usage: arbor checkout <commit-hash>")
+			fmt.Println("Usage: arbor checkout <commit-hash|branch-name>")
 			os.Exit(1)
 		}
 
@@ -87,13 +87,13 @@ func main() {
 			os.Exit(1)
 		}
 
-		commitHash := os.Args[2]
-		if err := checkout.Checkout(".", commitHash); err != nil {
+		commitHashOrRef := os.Args[2]
+		if err := checkout.Checkout(".", commitHashOrRef); err != nil {
 			fmt.Println("Error during checkout:", err)
 			os.Exit(1)
 		}
 
-		fmt.Println("Checked out commit:", commitHash)
+		fmt.Println("Checked out to:", commitHashOrRef)
 	case "branch":
 		if len(os.Args) < 2 {
 			fmt.Println("Usage: arbor branch <create|list> [args...]")

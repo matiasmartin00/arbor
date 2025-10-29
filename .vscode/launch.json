@@ -66,6 +66,55 @@
       "dlvFlags": [
         "--check-go-version=false"
       ]
+    },
+    {
+      "name": "Create Branch",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "branch",
+        "create",
+        "new-branch"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
+      "name": "List Branch",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "branch",
+        "list"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
+      "name": "Checkout Branch",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "checkout",
+        "new-branch"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
     }
   ]
 }

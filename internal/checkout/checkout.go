@@ -13,7 +13,26 @@ import (
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
-func Checkout(repoPath, commitHash string) error {
+func Checkout(repoPath, commitHashOrRef string) error {
+	var commitHash string
+	if refs.ExistsRef(".", commitHashOrRef) {
+		hash, err := refs.GetRefHashByName(repoPath, commitHashOrRef)
+		if err != nil {
+			return err
+		}
+
+		commitHash = hash
+	}
+
+	err := checkout(repoPath, commitHash)
+	if err != nil {
+		return err
+	}
+
+	return refs.UpdateHEAD(repoPath, commitHashOrRef)
+}
+
+func checkout(repoPath, commitHash string) error {
 	if len(commitHash) < 4 {
 		return fmt.Errorf("commit hash too short")
 	}
@@ -78,12 +97,6 @@ func Checkout(repoPath, commitHash string) error {
 	}
 
 	if err := index.Save(repoPath); err != nil {
-		return err
-	}
-
-	// update HEAD to point to this cpmmit (detached HEAD behavior)
-	// i will update the current ref with the commit hash
-	if err := refs.UpdateRef(repoPath, commitHash); err != nil {
 		return err
 	}
 
