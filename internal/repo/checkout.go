@@ -42,57 +42,16 @@ func Checkout(repoPath, commitHash string) error {
 		return fmt.Errorf("invalid commit object: no tree found")
 	}
 
-	// read tree object (our tree format is: "blob <hash> <path>\n")
-	treeData, err := object.ReadTree(repoPath, treeHash)
+	// apply tree to working directory
+	err = applyTree(repoPath, treeHash, "")
 	if err != nil {
 		return err
 	}
 
 	// build map[path]hash for entire in the tree
 	treeMap := make(map[string]string)
-	scanner := bufio.NewScanner(strings.NewReader(string(treeData)))
-	for scanner.Scan() {
-		line := scanner.Text()
-		// expecting format: "blob <hash> <path>"
-		parts := strings.SplitN(line, " ", 3)
-		if len(parts) != 3 {
-			return fmt.Errorf("invalid tree entry: %s", line)
-		}
-		typ := parts[0]
-		hash := parts[1]
-		path := parts[2]
-
-		if typ != "blob" {
-			continue // skip non-blob entries for simplicity
-		}
-
-		treeMap[filepath.FromSlash(path)] = hash
-	}
-
-	if err := scanner.Err(); err != nil {
+	if err := fillPathMapFromTree(repoPath, treeHash, "", treeMap); err != nil {
 		return err
-	}
-
-	// apply tree to working directory
-	for path, hash := range treeMap {
-		// ensure directory exists
-		dir := filepath.Dir(path)
-		if dir != "." {
-			if err := utils.CreateDir(dir); err != nil {
-				return err
-			}
-		}
-
-		// read blob data
-		blobData, err := object.ReadBlob(repoPath, hash)
-		if err != nil {
-			return err
-		}
-
-		// overwrite working file
-		if err := utils.WriteFile(path, blobData); err != nil {
-			return err
-		}
 	}
 
 	// remove tracked that are in the index but not in the tree
@@ -123,6 +82,105 @@ func Checkout(repoPath, commitHash string) error {
 	// update HEAD to point to this cpmmit (detached HEAD behavior)
 	// i will update the current ref with the commit hash
 	if err := updateRef(repoPath, commitHash); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// applyTree writes files and directories from the given tree object into basePath. (relative to repo root)
+func applyTree(repoPath, treeHash, basePath string) error {
+	data, err := object.ReadTree(repoPath, treeHash)
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, " ", 3)
+		if len(parts) != 3 {
+			continue
+		}
+
+		typ := parts[0]
+		hash := parts[1]
+		path := parts[2]
+
+		targetPath := filepath.FromSlash(filepath.Join(basePath, path))
+		if typ == "blob" {
+			// ensure directory exists
+			dir := filepath.Dir(targetPath)
+			if dir != "." {
+				if err := utils.CreateDir(dir); err != nil {
+					return err
+				}
+			}
+
+			// read blob data
+			blobData, err := object.ReadBlob(repoPath, hash)
+			if err != nil {
+				return err
+			}
+
+			// write file
+			if err := utils.WriteFile(targetPath, blobData); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		if typ == "tree" {
+			// create directory and recurse
+			if err := utils.CreateDir(targetPath); err != nil {
+				return err
+			}
+
+			if err := applyTree(repoPath, hash, targetPath); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// fillPathMapFromTree fills pathMap with entries path->blobHash using the tree recursively.
+// paths returned use OS-specific separators.
+func fillPathMapFromTree(repoPath, treeHash, basePath string, pathMap map[string]string) error {
+	data, err := object.ReadTree(repoPath, treeHash)
+	if err != nil {
+		return err
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.SplitN(line, " ", 3)
+		if len(parts) != 3 {
+			continue
+		}
+
+		typ := parts[0]
+		hash := parts[1]
+		path := parts[2]
+
+		if typ == "blob" {
+			fullPath := filepath.FromSlash(filepath.Join(basePath, path))
+			pathMap[fullPath] = hash
+			continue
+		}
+
+		if typ == "tree" {
+			// recurse into subtree
+			subBasePath := filepath.Join(basePath, path)
+			if err := fillPathMapFromTree(repoPath, hash, subBasePath, pathMap); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
 		return err
 	}
 

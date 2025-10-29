@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/matiasmartin00/arbor/internal/object"
+	"github.com/matiasmartin00/arbor/internal/tree"
 )
 
 func Commit(repoPath, message string) (string, error) {
 	// write tree
-	treeHash, err := writeTree(repoPath)
+	treeHash, err := tree.WriteTree(repoPath)
 
 	if err != nil {
 		return "", err
