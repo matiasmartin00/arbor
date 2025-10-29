@@ -35,7 +35,7 @@ func EnsureRepo(path string) error {
 
 // ensureCleanWorktree checks that for every entry in the index the working file matches the indexed blob hash.
 // If a file is missing or modified (workdir != index) it returns an error.
-func ensureCleanWorktree(repoPath string) error {
+func EnsureCleanWorktree(repoPath string) error {
 	index, err := index.Load(repoPath)
 	if err != nil {
 		return err

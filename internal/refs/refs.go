@@ -1,4 +1,4 @@
-package repo
+package refs
 
 import (
 	"os"
@@ -17,7 +17,7 @@ func readHEAD(repoPath string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-func getRefHash(repoPath string) (string, error) {
+func GetRefHash(repoPath string) (string, error) {
 	head, err := readHEAD(repoPath)
 	if err != nil {
 		return "", err
@@ -36,7 +36,7 @@ func getRefHash(repoPath string) (string, error) {
 	return strings.TrimSpace(string(data)), nil
 }
 
-func updateRef(repoPath, hash string) error {
+func UpdateRef(repoPath, hash string) error {
 	head, err := readHEAD(repoPath)
 	if err != nil {
 		return err

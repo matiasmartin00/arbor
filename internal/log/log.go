@@ -1,4 +1,4 @@
-package repo
+package log
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/matiasmartin00/arbor/internal/object"
+	"github.com/matiasmartin00/arbor/internal/refs"
 )
 
 func parseCommit(data []byte) (map[string]string, string, error) {
@@ -40,7 +41,7 @@ func parseCommit(data []byte) (map[string]string, string, error) {
 }
 
 func Log(repoPath string) error {
-	hash, err := getRefHash(repoPath)
+	hash, err := refs.GetRefHash(repoPath)
 	if err != nil {
 		return err
 	}

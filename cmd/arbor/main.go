@@ -6,6 +6,9 @@ import (
 	"strings"
 
 	"github.com/matiasmartin00/arbor/internal/add"
+	"github.com/matiasmartin00/arbor/internal/checkout"
+	"github.com/matiasmartin00/arbor/internal/commit"
+	"github.com/matiasmartin00/arbor/internal/log"
 	"github.com/matiasmartin00/arbor/internal/repo"
 )
 
@@ -55,7 +58,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		commitHash, err := repo.Commit(".", msg)
+		commitHash, err := commit.Commit(".", msg)
 		if err != nil {
 			fmt.Println("Error creating commit:", err)
 			os.Exit(1)
@@ -68,7 +71,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := repo.Log("."); err != nil {
+		if err := log.Log("."); err != nil {
 			fmt.Println("Error displaying log:", err)
 			os.Exit(1)
 		}
@@ -84,7 +87,7 @@ func main() {
 		}
 
 		commitHash := os.Args[2]
-		if err := repo.Checkout(".", commitHash); err != nil {
+		if err := checkout.Checkout(".", commitHash); err != nil {
 			fmt.Println("Error during checkout:", err)
 			os.Exit(1)
 		}

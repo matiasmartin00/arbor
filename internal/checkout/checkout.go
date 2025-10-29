@@ -1,4 +1,4 @@
-package repo
+package checkout
 
 import (
 	"bufio"
@@ -8,6 +8,8 @@ import (
 
 	"github.com/matiasmartin00/arbor/internal/index"
 	"github.com/matiasmartin00/arbor/internal/object"
+	"github.com/matiasmartin00/arbor/internal/refs"
+	"github.com/matiasmartin00/arbor/internal/repo"
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
@@ -17,7 +19,7 @@ func Checkout(repoPath, commitHash string) error {
 	}
 
 	// ensure repository is clean
-	if err := ensureCleanWorktree(repoPath); err != nil {
+	if err := repo.EnsureCleanWorktree(repoPath); err != nil {
 		return err
 	}
 
@@ -81,7 +83,7 @@ func Checkout(repoPath, commitHash string) error {
 
 	// update HEAD to point to this cpmmit (detached HEAD behavior)
 	// i will update the current ref with the commit hash
-	if err := updateRef(repoPath, commitHash); err != nil {
+	if err := refs.UpdateRef(repoPath, commitHash); err != nil {
 		return err
 	}
 
