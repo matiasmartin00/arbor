@@ -27,4 +27,4 @@ go.work.sum
 __debug_bin*
 
 **/.arbor
-**/demo.txt
+**/*demo.txt

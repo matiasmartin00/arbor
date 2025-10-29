@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/matiasmartin00/arbor/internal/add"
 	"github.com/matiasmartin00/arbor/internal/repo"
 )
 
@@ -33,13 +34,15 @@ func main() {
 			os.Exit(1)
 		}
 
-		hash, err := repo.Add(".", os.Args[2])
+		added, err := add.Add(".", os.Args[2:])
 		if err != nil {
 			fmt.Println("Error adding file:", err)
 			os.Exit(1)
 		}
 
-		fmt.Println("File added with hash:", hash)
+		for p, h := range added {
+			fmt.Printf("Added %s with hash %s\n", p, h)
+		}
 	case "commit":
 		if len(os.Args) < 4 || os.Args[2] != "-m" {
 			fmt.Println("Usage: arbor commit -m <message>")

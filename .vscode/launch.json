@@ -27,7 +27,7 @@
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "add",
-        "demo.txt"
+        "**/*.txt"
       ],
       "env": {},
       "buildFlags": "",
