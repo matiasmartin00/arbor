@@ -9,7 +9,6 @@ import (
 )
 
 func main() {
-	fmt.Println("Arbor VCS - Command Line Interface")
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: arbor <command> [options]")
 		return
