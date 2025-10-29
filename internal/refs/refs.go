@@ -9,6 +9,7 @@ import (
 )
 
 const headFile = "HEAD"
+const refsDir = "refs/heads"
 
 func readHEAD(repoPath string) (string, error) {
 	headPath := getHeadPath(repoPath)
@@ -56,6 +57,16 @@ func UpdateHEAD(repoPath, ref string) error {
 
 func IsRef(head string) bool {
 	return strings.HasPrefix(head, "refs/")
+}
+
+func ExistsRef(repoPath, ref string) bool {
+	refPath := filepath.Join(utils.GetRepoDir(repoPath), refsDir, ref)
+	return utils.Exists(refPath)
+}
+
+func CreateRef(repoPath, ref, hash string) error {
+	refPath := filepath.Join(utils.GetRepoDir(repoPath), refsDir, ref)
+	return utils.WriteFile(refPath, []byte(hash+"\n"))
 }
 
 func getHeadPath(path string) string {

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/matiasmartin00/arbor/internal/add"
+	"github.com/matiasmartin00/arbor/internal/branch"
 	"github.com/matiasmartin00/arbor/internal/checkout"
 	"github.com/matiasmartin00/arbor/internal/commit"
 	"github.com/matiasmartin00/arbor/internal/log"
@@ -93,6 +94,45 @@ func main() {
 		}
 
 		fmt.Println("Checked out commit:", commitHash)
+	case "branch":
+		if len(os.Args) < 2 {
+			fmt.Println("Usage: arbor branch <create|list> [args...]")
+			os.Exit(1)
+		}
+
+		subcommand := os.Args[2]
+		switch subcommand {
+		case "create":
+			if len(os.Args) < 4 {
+				fmt.Println("Usage: arbor branch create <branch-name>")
+				os.Exit(1)
+			}
+
+			if err := repo.EnsureRepo("."); err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			branchName := os.Args[3]
+			createdBranch, err := branch.CreateBranch(".", branchName)
+			if err != nil {
+				fmt.Println("Error creating branch:", err)
+				os.Exit(1)
+			}
+
+			fmt.Println("Branch created:", createdBranch)
+		case "list":
+			if err := repo.EnsureRepo("."); err != nil {
+				fmt.Println("Error:", err)
+				os.Exit(1)
+			}
+
+			fmt.Println("Not implemented yet.")
+			os.Exit(1)
+		default:
+			fmt.Println("Unknown branch command:", subcommand)
+			os.Exit(1)
+		}
 	default:
 		fmt.Println("Unknown command:", command)
 		os.Exit(1)
