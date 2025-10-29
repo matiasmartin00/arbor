@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/matiasmartin00/arbor/cmd/arbor/cli"
 	"github.com/matiasmartin00/arbor/internal/add"
 	"github.com/matiasmartin00/arbor/internal/branch"
 	"github.com/matiasmartin00/arbor/internal/checkout"
@@ -14,6 +15,14 @@ import (
 )
 
 func main() {
+	rootCmd := cli.NewRootCommand()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+}
+
+func main_bkp() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: arbor <command> [options]")
 		return
@@ -114,13 +123,13 @@ func main() {
 			}
 
 			branchName := os.Args[3]
-			createdBranch, err := branch.CreateBranch(".", branchName)
+			err := branch.CreateBranch(".", branchName)
 			if err != nil {
 				fmt.Println("Error creating branch:", err)
 				os.Exit(1)
 			}
 
-			fmt.Println("Branch created:", createdBranch)
+			fmt.Println("Branch created:", branchName)
 		case "list":
 			if err := repo.EnsureRepo("."); err != nil {
 				fmt.Println("Error:", err)

@@ -17,32 +17,32 @@ var (
 	errNoCommits         = fmt.Errorf("no commits yet")
 )
 
-func CreateBranch(repoPath, name string) (string, error) {
+func CreateBranch(repoPath, name string) error {
 	if strings.Contains(name, "/") {
-		return "", errInvalidBranchName
+		return errInvalidBranchName
 	}
 
 	// get current commit hash
 	hash, err := refs.GetRefHash(repoPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if len(hash) == 0 {
-		return "", errNoCommits
+		return errNoCommits
 	}
 
 	// check if branch exists
 	if refs.ExistsRef(repoPath, name) {
-		return "", errBranchExists
+		return errBranchExists
 	}
 
 	// create ref
 	if err := refs.CreateRef(repoPath, name, hash); err != nil {
-		return "", err
+		return err
 	}
 
-	return name, nil
+	return nil
 }
 
 // listBranches returns a list of branch names and mark the current one with '*'
