@@ -8,30 +8,9 @@ import (
 
 	"github.com/matiasmartin00/arbor/internal/index"
 	"github.com/matiasmartin00/arbor/internal/object"
-	"github.com/matiasmartin00/arbor/internal/refs"
 	"github.com/matiasmartin00/arbor/internal/tree"
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
-
-func getHeadTreeMap(repoPath string) (map[string]string, error) {
-	m := map[string]string{}
-
-	commitHash, err := refs.GetRefHash(repoPath)
-	if err != nil {
-		return nil, err
-	}
-
-	treeHash, err := tree.GetTreeHashFromCommitHash(repoPath, commitHash)
-	if err != nil {
-		return nil, nil
-	}
-
-	if err = tree.FillPathMapFromTree(repoPath, treeHash, "", m); err != nil {
-		return nil, err
-	}
-
-	return m, nil
-}
 
 func fileBlobHash(path string) (string, error) {
 	data, err := utils.ReadFile(path)
@@ -49,7 +28,7 @@ func Status(repoPath string) error {
 	}
 
 	// headMap files
-	headMap, err := getHeadTreeMap(repoPath)
+	headMap, err := tree.GetHeadTreeMap(repoPath)
 	if err != nil {
 		return err
 	}

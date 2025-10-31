@@ -9,6 +9,7 @@ import (
 
 	"github.com/matiasmartin00/arbor/internal/index"
 	"github.com/matiasmartin00/arbor/internal/object"
+	"github.com/matiasmartin00/arbor/internal/refs"
 )
 
 // writeTree builds a recursive tree objects from the index and returns the root tree hash.
@@ -146,4 +147,24 @@ func GetTreeHashFromCommitHash(repoPath, commitHash string) (string, error) {
 	}
 
 	return treeHash, nil
+}
+
+func GetHeadTreeMap(repoPath string) (map[string]string, error) {
+	m := map[string]string{}
+
+	commitHash, err := refs.GetRefHash(repoPath)
+	if err != nil {
+		return nil, err
+	}
+
+	treeHash, err := GetTreeHashFromCommitHash(repoPath, commitHash)
+	if err != nil {
+		return nil, nil
+	}
+
+	if err = FillPathMapFromTree(repoPath, treeHash, "", m); err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
