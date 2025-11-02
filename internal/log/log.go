@@ -5,40 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/matiasmartin00/arbor/internal/object"
+	"github.com/matiasmartin00/arbor/internal/commit"
 	"github.com/matiasmartin00/arbor/internal/refs"
 )
-
-func parseCommit(data []byte) (map[string]string, string, error) {
-	s := string(data)
-	parts := strings.SplitN(s, "\n\n", 2)
-	if len(parts) != 2 {
-		return nil, "", nil
-	}
-
-	headers := strings.Split(parts[0], "\n")
-	hmap := make(map[string]string)
-	for _, h := range headers {
-		if len(h) == 0 {
-			continue
-		}
-
-		kv := strings.SplitN(h, " ", 2)
-		if len(kv) != 2 {
-			continue
-		}
-
-		hmap[kv[0]] = kv[1]
-	}
-
-	msg := ""
-
-	if len(parts) == 2 {
-		msg = strings.TrimSpace(parts[1])
-	}
-
-	return hmap, msg, nil
-}
 
 func Log(repoPath string) error {
 	hash, err := refs.GetRefHash(repoPath)
@@ -52,12 +21,7 @@ func Log(repoPath string) error {
 	}
 
 	for len(hash) > 0 {
-		data, err := object.ReadCommit(repoPath, hash)
-		if err != nil {
-			return err
-		}
-
-		hmap, msg, err := parseCommit(data)
+		hmap, msg, err := commit.GetCommitContent(repoPath, hash)
 		if err != nil {
 			return err
 		}
