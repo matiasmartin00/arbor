@@ -30,6 +30,7 @@ func NewRootCommand() *cobra.Command {
 		NewBranchCommand(),
 		NewStatusCommand(),
 		NewDiffCommand(),
+		NewMergeCommand(),
 	)
 
 	return cmd
