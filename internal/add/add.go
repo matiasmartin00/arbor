@@ -12,8 +12,8 @@ import (
 
 // add paths one or more files to the index
 // returns thepath->blobHash of the added files
-func Add(repoPath string, inputs []string) (map[string]string, error) {
-	added := make(map[string]string)
+func Add(repoPath string, inputs []string) (map[string]object.ObjectHash, error) {
+	added := make(map[string]object.ObjectHash)
 	idx, err := index.Load(repoPath)
 	if err != nil {
 		return nil, err

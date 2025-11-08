@@ -50,8 +50,12 @@ func EnsureCleanWorktree(repoPath string) error {
 			return err
 		}
 
-		curHash := object.HashBlob(data)
-		if curHash != h {
+		curHash, err := object.HashBlob(data)
+		if err != nil {
+			return err
+		}
+
+		if curHash.NotEquals(h) {
 			return fmt.Errorf("uncommitted changes: file %s has been modified (not committed or staged)", p)
 		}
 	}

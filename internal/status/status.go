@@ -12,12 +12,12 @@ import (
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
-func fileBlobHash(path string) (string, error) {
+func fileBlobHash(path string) (object.ObjectHash, error) {
 	data, err := utils.ReadFile(path)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return object.HashBlob(data), nil
+	return object.HashBlob(data)
 }
 
 func Status(repoPath string) error {
@@ -42,7 +42,7 @@ func Status(repoPath string) error {
 			continue
 		}
 
-		if ih != hh {
+		if ih.NotEquals(hh) {
 			toBeCommitted = append(toBeCommitted, fmt.Sprintf("modified: %s", p))
 		}
 	}
@@ -70,7 +70,7 @@ func Status(repoPath string) error {
 			return err
 		}
 
-		if curHash != ih {
+		if curHash.NotEquals(ih) {
 			notStaged = append(notStaged, fmt.Sprintf("modified: %s", p))
 		}
 	}

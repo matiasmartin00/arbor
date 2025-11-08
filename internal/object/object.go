@@ -10,39 +10,68 @@ import (
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
+type ObjectType int
+
+const (
+	BlobType ObjectType = iota
+	TreeType
+	CommitType
+)
+
+func (ot ObjectType) String() string {
+	types := []string{"blob", "tree", "commit"}
+	if int(ot) < 0 || int(ot) >= len(types) {
+		return ""
+	}
+	return types[int(ot)]
+}
+
+func parseObjectType(s string) ObjectType {
+	switch s {
+	case "blob":
+		return BlobType
+	case "tree":
+		return TreeType
+	case "commit":
+		return CommitType
+	default:
+		return -1
+	}
+}
+
 // HashObject takes the data and its type (e.g., "blob", "tree", "commit")
 // and returns the SHA-1 hash of the object as a hexadecimal string.
-func hashObject(data []byte, objType string) string {
+func hashObject(data []byte, objType ObjectType) (ObjectHash, error) {
 	storeData := createObject(data, objType)
 	h := sha1.Sum(storeData)
-	return hex.EncodeToString(h[:])
+	return NewObjectHash(hex.EncodeToString(h[:]))
 }
 
-func HashBlob(data []byte) string {
-	return hashObject(data, "blob")
+func HashBlob(data []byte) (ObjectHash, error) {
+	return hashObject(data, BlobType)
 }
 
-func WriteBlob(repoPath string, data []byte) (string, error) {
-	return writeObject(repoPath, data, "blob")
+func WriteBlob(repoPath string, data []byte) (ObjectHash, error) {
+	return writeObject(repoPath, data, BlobType)
 }
 
-func WriteTree(repoPath string, data []byte) (string, error) {
-	return writeObject(repoPath, data, "tree")
+func WriteTree(repoPath string, data []byte) (ObjectHash, error) {
+	return writeObject(repoPath, data, TreeType)
 }
 
-func WriteCommit(repoPath string, data []byte) (string, error) {
-	return writeObject(repoPath, data, "commit")
-}
-
-func writeObject(repoPath string, data []byte, objType string) (string, error) {
-	hash := hashObject(data, objType)
-	dir := utils.GetObjectsDir(repoPath)
-	objDir := filepath.Join(dir, hash[:2])
-	if err := utils.CreateDir(objDir); err != nil {
-		return "", err
+func writeObject(repoPath string, data []byte, objType ObjectType) (ObjectHash, error) {
+	hash, err := hashObject(data, objType)
+	if err != nil {
+		return nil, err
 	}
 
-	file := filepath.Join(objDir, hash[2:])
+	dir := utils.GetObjectsDir(repoPath)
+	objDir := filepath.Join(dir, hash.Dir())
+	if err := utils.CreateDir(objDir); err != nil {
+		return nil, err
+	}
+
+	file := filepath.Join(objDir, hash.File())
 	if utils.Exists(file) {
 		return hash, nil
 	}
@@ -50,56 +79,43 @@ func writeObject(repoPath string, data []byte, objType string) (string, error) {
 	content := createObject(data, objType)
 
 	if err := utils.WriteFile(file, content); err != nil {
-		return "", err
+		return nil, err
 	}
 	return hash, nil
 }
 
-func ReadCommit(repoPath, hash string) ([]byte, error) {
+func ReadBlob(repoPath string, hash ObjectHash) ([]byte, error) {
 	data, objType, err := ReadObject(repoPath, hash)
 	if err != nil {
 		return nil, err
 	}
 
-	if objType != "commit" {
-		return nil, fmt.Errorf("object %s is not a commit", hash)
-	}
-
-	return data, nil
-}
-
-func ReadBlob(repoPath, hash string) ([]byte, error) {
-	data, objType, err := ReadObject(repoPath, hash)
-	if err != nil {
-		return nil, err
-	}
-
-	if objType != "blob" {
+	if objType != BlobType {
 		return nil, fmt.Errorf("object %s is not a blob", hash)
 	}
 	return data, nil
 }
 
-func ReadTree(repoPath, hash string) ([]byte, error) {
+func ReadTree(repoPath string, hash ObjectHash) ([]byte, error) {
 	data, objType, err := ReadObject(repoPath, hash)
 	if err != nil {
 		return nil, err
 	}
 
-	if objType != "tree" {
+	if objType != TreeType {
 		return nil, fmt.Errorf("object %s is not a tree", hash)
 	}
 	return data, nil
 }
 
-func ReadObject(repoPath, hash string) ([]byte, string, error) {
+func ReadObject(repoPath string, hash ObjectHash) ([]byte, ObjectType, error) {
 	dir := utils.GetObjectsDir(repoPath)
-	objDir := filepath.Join(dir, hash[:2])
-	file := filepath.Join(objDir, hash[2:])
+	objDir := filepath.Join(dir, hash.Dir())
+	file := filepath.Join(objDir, hash.File())
 
 	content, err := os.ReadFile(file)
 	if err != nil {
-		return nil, "", err
+		return nil, -1, err
 	}
 
 	// header: "<type> <size>\x00"
@@ -112,24 +128,24 @@ func ReadObject(repoPath, hash string) ([]byte, string, error) {
 	}
 
 	if zero == -1 {
-		return nil, "", fmt.Errorf("invalid object format")
+		return nil, -1, fmt.Errorf("invalid object format")
 	}
 
 	var size int
 	var objType string
 	if _, err := fmt.Sscanf(string(content[:zero]), "%s %d", &objType, &size); err != nil {
-		return nil, "", err
+		return nil, -1, err
 	}
 
 	data := content[zero+1:]
 	if len(data) != size {
-		return nil, "", fmt.Errorf("invalid object size")
+		return nil, -1, fmt.Errorf("invalid object size")
 	}
 
-	return data, objType, nil
+	return data, parseObjectType(objType), nil
 }
 
-func createObject(data []byte, objType string) []byte {
+func createObject(data []byte, objType ObjectType) []byte {
 	header := fmt.Sprintf("%s %d\x00", objType, len(data))
 	return append([]byte(header), data...)
 }

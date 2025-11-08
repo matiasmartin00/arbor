@@ -19,21 +19,8 @@ const (
 	addLine = "+"
 )
 
-// readBlobContent returns []string lines for a blob hash or file path.
-// if src looks like a blob hash (40 hex) it reads object; otherwise it treats src as filesystem path.
-func readBlobContent(repoPath, pathOrHash string) ([]string, error) {
-
-	// heuristic: if src length==40 and object exists, read it
-	if len(pathOrHash) == 40 {
-		blob, err := object.ReadBlob(repoPath, pathOrHash)
-		if err != nil {
-			return nil, err
-		}
-
-		return splitLines(blob)
-	}
-
-	data, err := utils.ReadFile(pathOrHash)
+func readFileContent(repoPath, path string) ([]string, error) {
+	data, err := utils.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return []string{}, nil
@@ -42,6 +29,15 @@ func readBlobContent(repoPath, pathOrHash string) ([]string, error) {
 	}
 
 	return splitLines(data)
+}
+
+func readBlobContent(repoPath string, hash object.ObjectHash) ([]string, error) {
+	blob, err := object.ReadBlob(repoPath, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	return splitLines(blob)
 }
 
 func splitLines(data []byte) ([]string, error) {
@@ -129,7 +125,7 @@ func DiffWorktreeVsIndex(repoPath string, paths []string) error {
 				continue
 			}
 		}
-		
+
 		// read index content via blob
 		indexLines, err := readBlobContent(repoPath, blobHash)
 		if err != nil {
@@ -138,7 +134,7 @@ func DiffWorktreeVsIndex(repoPath string, paths []string) error {
 
 		// read worktree content from file
 		workPath := filepath.FromSlash(p)
-		workLines, err := readBlobContent(repoPath, workPath)
+		workLines, err := readFileContent(repoPath, workPath)
 		if err != nil {
 			return err
 		}
@@ -191,7 +187,7 @@ func DiffIndexVsHead(repoPath string, paths []string) error {
 
 		var idxLines, headLines []string
 
-		if ih != "" {
+		if ih != nil {
 			idxLines, err = readBlobContent(repoPath, ih)
 			if err != nil {
 				return err
@@ -200,7 +196,7 @@ func DiffIndexVsHead(repoPath string, paths []string) error {
 			idxLines = []string{}
 		}
 
-		if hh != "" {
+		if hh != nil {
 			headLines, err = readBlobContent(repoPath, hh)
 			if err != nil {
 				return err
@@ -226,32 +222,38 @@ func DiffIndexVsHead(repoPath string, paths []string) error {
 
 // diffCommits diff two commits by comparings their trees
 func DiffCommits(repoPath, commitA, commitB string, paths []string) error {
-	mapA := map[string]string{}
-	mapB := map[string]string{}
+	mapA := map[string]object.ObjectHash{}
+	mapB := map[string]object.ObjectHash{}
 
 	if len(commitA) > 0 {
-		treeHash, err := tree.GetTreeHashFromCommitHash(repoPath, commitA)
+		hash, err := object.NewObjectHash(commitA)
 		if err != nil {
 			return err
 		}
 
-		if len(treeHash) > 0 {
-			if err := tree.FillPathMapFromTree(repoPath, treeHash, "", mapA); err != nil {
-				return err
-			}
+		commit, err := object.ReadCommit(repoPath, hash)
+		if err != nil {
+			return err
+		}
+
+		if err := tree.FillPathMapFromTree(repoPath, commit.TreeHash(), "", mapA); err != nil {
+			return err
 		}
 	}
 
 	if len(commitB) > 0 {
-		treeHash, err := tree.GetTreeHashFromCommitHash(repoPath, commitB)
+		hash, err := object.NewObjectHash(commitB)
 		if err != nil {
 			return err
 		}
 
-		if len(treeHash) > 0 {
-			if err := tree.FillPathMapFromTree(repoPath, treeHash, "", mapB); err != nil {
-				return err
-			}
+		commit, err := object.ReadCommit(repoPath, hash)
+		if err != nil {
+			return err
+		}
+
+		if err := tree.FillPathMapFromTree(repoPath, commit.TreeHash(), "", mapB); err != nil {
+			return err
 		}
 	}
 
@@ -277,7 +279,7 @@ func DiffCommits(repoPath, commitA, commitB string, paths []string) error {
 		aHash := mapA[p]
 		bHash := mapB[p]
 		var aLines, bLines []string
-		if len(aHash) > 0 {
+		if aHash != nil {
 			blob, err := readBlobContent(repoPath, aHash)
 			if err != nil {
 				return nil
@@ -288,7 +290,7 @@ func DiffCommits(repoPath, commitA, commitB string, paths []string) error {
 			aLines = []string{}
 		}
 
-		if len(bHash) > 0 {
+		if bHash != nil {
 			blob, err := readBlobContent(repoPath, bHash)
 			if err != nil {
 				return nil

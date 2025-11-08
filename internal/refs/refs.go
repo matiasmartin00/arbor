@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/matiasmartin00/arbor/internal/object"
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
@@ -28,19 +29,19 @@ func GetHEAD(repoPath string) (string, error) {
 }
 
 // GetRefHash returns the commit hash that HEAD points to
-func GetRefHash(repoPath string) (string, error) {
+func GetRefHash(repoPath string) (object.ObjectHash, error) {
 	head, err := readHEAD(repoPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return getRefHash(repoPath, head)
 }
 
 // GetRefHashByName returns the commit hash for a given ref name
-func GetRefHashByName(repoPath, ref string) (string, error) {
+func GetRefHashByName(repoPath, ref string) (object.ObjectHash, error) {
 	if NotExistsRef(repoPath, ref) {
-		return "", fmt.Errorf("ref %s does not exist", ref)
+		return nil, fmt.Errorf("ref %s does not exist", ref)
 	}
 
 	head := filepath.Join(refsDir, ref)
@@ -48,21 +49,21 @@ func GetRefHashByName(repoPath, ref string) (string, error) {
 }
 
 // getRefHash assumes head is like "refs/heads/main"
-func getRefHash(repoPath, head string) (string, error) {
+func getRefHash(repoPath, head string) (object.ObjectHash, error) {
 	// assume it's a ref like "refs/heads/main"
 	refPath := filepath.Join(utils.GetRepoDir(repoPath), head)
 	data, err := utils.ReadFile(refPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", nil
+			return nil, nil
 		}
-		return "", err
+		return nil, err
 	}
 
-	return strings.TrimSpace(string(data)), nil
+	return object.NewObjectHashFromBytes(data)
 }
 
-func UpdateRef(repoPath, hash string) error {
+func UpdateRef(repoPath string, hash object.ObjectHash) error {
 	head, err := readHEAD(repoPath)
 	if err != nil {
 		return err
@@ -70,7 +71,7 @@ func UpdateRef(repoPath, hash string) error {
 
 	refPath := filepath.Join(utils.GetRepoDir(repoPath), head)
 
-	return utils.WriteFile(refPath, []byte(hash+"\n"))
+	return utils.WriteFile(refPath, []byte(hash.String()+"\n"))
 }
 
 func UpdateHEAD(repoPath, ref string) error {
@@ -91,9 +92,9 @@ func NotExistsRef(repoPath, ref string) bool {
 	return !ExistsRef(repoPath, ref)
 }
 
-func CreateRef(repoPath, ref, hash string) error {
+func CreateRef(repoPath, ref string, hash object.ObjectHash) error {
 	refPath := filepath.Join(utils.GetRepoDir(repoPath), refsDir, ref)
-	return utils.WriteFile(refPath, []byte(hash+"\n"))
+	return utils.WriteFile(refPath, []byte(hash.String()+"\n"))
 }
 
 func getHeadPath(path string) string {

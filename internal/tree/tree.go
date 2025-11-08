@@ -14,14 +14,14 @@ import (
 
 // writeTree builds a recursive tree objects from the index and returns the root tree hash.
 // tree format: each line is "blob <hash> <path>" for blobs, and "tree <hash> <path>" for subtrees.
-func WriteTree(repoPath string) (string, error) {
+func WriteTree(repoPath string) (object.ObjectHash, error) {
 	idx, err := index.Load(repoPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// build a map of path -> hash
-	entries := make(map[string]string, len(idx))
+	entries := make(map[string]object.ObjectHash, len(idx))
 	for p, h := range idx {
 		entries[filepath.ToSlash(p)] = h
 	}
@@ -29,8 +29,8 @@ func WriteTree(repoPath string) (string, error) {
 	return writeTreeRecursive(repoPath, entries, "")
 }
 
-func writeTreeRecursive(repoPath string, entries map[string]string, prefix string) (string, error) {
-	files := make(map[string]string)
+func writeTreeRecursive(repoPath string, entries map[string]object.ObjectHash, prefix string) (object.ObjectHash, error) {
+	files := make(map[string]object.ObjectHash)
 	subdirsSet := make(map[string]struct{})
 
 	for p, h := range entries {
@@ -76,8 +76,9 @@ func writeTreeRecursive(repoPath string, entries map[string]string, prefix strin
 		// subdirectory
 		subtreeHash, err := writeTreeRecursive(repoPath, entries, prefix+name+"/")
 		if err != nil {
-			return "", err
+			return nil, err
 		}
+
 		line := fmt.Sprintf("tree %s %s\n", subtreeHash, name)
 		content = append(content, []byte(line)...)
 	}
@@ -87,7 +88,7 @@ func writeTreeRecursive(repoPath string, entries map[string]string, prefix strin
 
 // fillPathMapFromTree fills pathMap with entries path->blobHash using the tree recursively.
 // paths returned use OS-specific separators.
-func FillPathMapFromTree(repoPath, treeHash, basePath string, pathMap map[string]string) error {
+func FillPathMapFromTree(repoPath string, treeHash object.ObjectHash, basePath string, pathMap map[string]object.ObjectHash) error {
 	data, err := object.ReadTree(repoPath, treeHash)
 	if err != nil {
 		return err
@@ -102,7 +103,11 @@ func FillPathMapFromTree(repoPath, treeHash, basePath string, pathMap map[string
 		}
 
 		typ := parts[0]
-		hash := parts[1]
+		hash, err := object.NewObjectHash(parts[1])
+		if err != nil {
+			return err
+		}
+
 		path := parts[2]
 
 		if typ == "blob" {
@@ -127,40 +132,25 @@ func FillPathMapFromTree(repoPath, treeHash, basePath string, pathMap map[string
 	return nil
 }
 
-func GetTreeHashFromCommitHash(repoPath, commitHash string) (string, error) {
-	data, err := object.ReadCommit(repoPath, commitHash)
-	if err != nil {
-		return "", err
-	}
-
-	parts := strings.SplitN(string(data), "\n\n", 2)
-	headers := strings.Split(parts[0], "\n")
-	var treeHash string
-	for _, h := range headers {
-		if strings.HasPrefix(h, "tree ") {
-			treeHash = strings.TrimSpace(strings.TrimPrefix(h, "tree "))
-			break
-		}
-	}
-	if len(treeHash) == 0 {
-		return "", fmt.Errorf("nvalid commit object (%s) no tree found", commitHash)
-	}
-
-	return treeHash, nil
-}
-
-func GetHeadTreeMap(repoPath string) (map[string]string, error) {
-	m := map[string]string{}
+func GetHeadTreeMap(repoPath string) (map[string]object.ObjectHash, error) {
+	m := map[string]object.ObjectHash{}
 
 	commitHash, err := refs.GetRefHash(repoPath)
 	if err != nil {
 		return nil, err
 	}
 
-	treeHash, err := GetTreeHashFromCommitHash(repoPath, commitHash)
-	if err != nil {
-		return nil, nil
+	// if commit hash is nil, no head yet
+	if commitHash == nil {
+		return m, nil
 	}
+
+	commit, err := object.ReadCommit(repoPath, commitHash)
+	if err != nil {
+		return nil, err
+	}
+
+	treeHash := commit.TreeHash()
 
 	if err = FillPathMapFromTree(repoPath, treeHash, "", m); err != nil {
 		return nil, err

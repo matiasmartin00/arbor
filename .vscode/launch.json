@@ -20,6 +20,53 @@
       ]
     },
     {
+      "name": "Status",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "status"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
+      "name": "Diff Commits",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "diff",
+        "ad68a694708ac638bb747d1aaf3aacd3478cc95e",
+        "90e4a448716d30c483d4395269e01303f5b59b27"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
+      "name": "Diff",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "diff"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
       "name": "Add",
       "type": "go",
       "request": "launch",
@@ -101,6 +148,22 @@
       ]
     },
     {
+      "name": "Checkout Commit",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "checkout",
+        "90e4a448716d30c483d4395269e01303f5b59b27"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
       "name": "Checkout Branch",
       "type": "go",
       "request": "launch",
@@ -133,14 +196,14 @@
       ]
     },
     {
-      "name": "Merge branch new-branch",
+      "name": "Merge branch my-feature",
       "type": "go",
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "merge",
-        "new-branch"
+        "my-feature"
       ],
       "env": {},
       "buildFlags": "",

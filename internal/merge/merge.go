@@ -3,7 +3,6 @@ package merge
 import (
 	"bufio"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -54,7 +53,7 @@ func Merge(repoPath, branchName string) error {
 			return err
 		}
 
-		fmt.Printf("Fast-forward merge.")
+		fmt.Printf("Fast-forward merge.\n")
 		return nil
 	}
 
@@ -64,39 +63,39 @@ func Merge(repoPath, branchName string) error {
 		return err
 	}
 
-	baseTree := map[string]string{}
-	headTree := map[string]string{}
-	targetTree := map[string]string{}
+	baseTree := map[string]object.ObjectHash{}
+	headTree := map[string]object.ObjectHash{}
+	targetTree := map[string]object.ObjectHash{}
 
-	baseTreeHash, err := tree.GetTreeHashFromCommitHash(repoPath, baseHash)
+	baseCommit, err := object.ReadCommit(repoPath, baseHash)
 	if err != nil {
 		return err
 	}
 
-	headTreeHash, err := tree.GetTreeHashFromCommitHash(repoPath, headHash)
+	headCommit, err := object.ReadCommit(repoPath, headHash)
 	if err != nil {
 		return err
 	}
 
-	targetTreeHash, err := tree.GetTreeHashFromCommitHash(repoPath, targetHash)
+	targetCommit, err := object.ReadCommit(repoPath, targetHash)
 	if err != nil {
 		return err
 	}
 
-	if err := tree.FillPathMapFromTree(repoPath, baseTreeHash, "", baseTree); err != nil {
+	if err := tree.FillPathMapFromTree(repoPath, baseCommit.TreeHash(), "", baseTree); err != nil {
 		return err
 	}
 
-	if err := tree.FillPathMapFromTree(repoPath, headTreeHash, "", headTree); err != nil {
+	if err := tree.FillPathMapFromTree(repoPath, headCommit.TreeHash(), "", headTree); err != nil {
 		return err
 	}
 
-	if err := tree.FillPathMapFromTree(repoPath, targetTreeHash, "", targetTree); err != nil {
+	if err := tree.FillPathMapFromTree(repoPath, targetCommit.TreeHash(), "", targetTree); err != nil {
 		return err
 	}
 
 	conflicts := []string{}
-	merged := map[string]string{}
+	merged := map[string]object.ObjectHash{}
 
 	// union all paths
 	allPaths := map[string]struct{}{}
@@ -116,11 +115,11 @@ func Merge(repoPath, branchName string) error {
 		target := targetTree[path]
 
 		switch {
-		case head == target:
+		case head.Equals(target):
 			merged[path] = head
-		case base == head:
+		case base.Equals(head):
 			merged[path] = target // changed only in target
-		case base == target:
+		case base.Equals(target):
 			merged[path] = head // changed only in head
 		default:
 			// conficlt
@@ -172,17 +171,17 @@ func Merge(repoPath, branchName string) error {
 	return nil
 }
 
-func isAncestorCommit(repoPath, maybeAncestor, targetHash string) (bool, error) {
-	if len(maybeAncestor) == 0 || len(targetHash) == 0 {
+func isAncestorCommit(repoPath string, maybeAncestor, targetHash object.ObjectHash) (bool, error) {
+	if maybeAncestor == nil || targetHash == nil {
 		return false, nil
 	}
 
-	toVisit := []string{targetHash}
-	seen := map[string]struct{}{}
+	toVisit := []object.ObjectHash{targetHash}
+	seen := map[object.ObjectHash]struct{}{}
 	for len(toVisit) > 0 {
 		c := toVisit[0]
 		toVisit = toVisit[1:]
-		if c == maybeAncestor {
+		if maybeAncestor.Equals(c) {
 			return true, nil
 		}
 
@@ -191,57 +190,53 @@ func isAncestorCommit(repoPath, maybeAncestor, targetHash string) (bool, error) 
 		}
 
 		seen[c] = struct{}{}
-		data, err := object.ReadCommit(repoPath, c)
+		commit, err := object.ReadCommit(repoPath, object.ObjectHash(c))
 		if err != nil {
 			continue
 		}
 
-		for _, l := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(l, "parent ") {
-				toVisit = append(toVisit, strings.TrimPrefix(l, "parent "))
-			}
+		if commit.ParentHash() != nil {
+			toVisit = append(toVisit, commit.ParentHash())
 		}
 	}
 	return false, nil
 }
 
-func findCommonAncestor(repoPath, a, b string) (string, error) {
-	if len(a) == 0 || len(b) == 0 {
-		return "", nil
+func findCommonAncestor(repoPath string, a, b object.ObjectHash) (object.ObjectHash, error) {
+	if a == nil || b == nil {
+		return nil, nil
 	}
 
 	ancA := allAncestors(repoPath, a)
 	ancB := allAncestors(repoPath, b)
 
-	for k := range ancA {
+	for k, v := range ancA {
 		if _, ok := ancB[k]; ok {
-			return k, nil
+			return v, nil
 		}
 	}
 
-	return "", nil
+	return nil, fmt.Errorf("ancestor not found")
 }
 
-func allAncestors(repoPath, start string) map[string]struct{} {
-	m := map[string]struct{}{}
-	queue := []string{start}
+func allAncestors(repoPath string, start object.ObjectHash) map[string]object.ObjectHash {
+	m := make(map[string]object.ObjectHash)
+	queue := []object.ObjectHash{start}
 	for len(queue) > 0 {
 		c := queue[0]
 		queue = queue[1:]
-		if _, ok := m[c]; ok {
+		if _, ok := m[c.String()]; ok {
 			continue
 		}
 
-		m[c] = struct{}{}
+		m[c.String()] = c
 		data, err := object.ReadCommit(repoPath, c)
 		if err != nil {
 			continue
 		}
 
-		for _, l := range strings.Split(string(data), "\n") {
-			if strings.HasPrefix(l, "parent ") {
-				queue = append(queue, strings.TrimPrefix(l, "parent "))
-			}
+		if data.ParentHash() != nil {
+			queue = append(queue, data.ParentHash())
 		}
 	}
 
@@ -251,27 +246,13 @@ func allAncestors(repoPath, start string) map[string]struct{} {
 // it is duplicated with diff, TODO: REFACTOR THIS.
 // readBlobContent returns []string lines for a blob hash or file path.
 // if src looks like a blob hash (40 hex) it reads object; otherwise it treats src as filesystem path.
-func readBlobContent(repoPath, pathOrHash string) ([]string, error) {
-
-	// heuristic: if src length==40 and object exists, read it
-	if len(pathOrHash) == 40 {
-		blob, err := object.ReadBlob(repoPath, pathOrHash)
-		if err != nil {
-			return nil, err
-		}
-
-		return splitLines(blob)
-	}
-
-	data, err := utils.ReadFile(pathOrHash)
+func readBlobContent(repoPath string, hash object.ObjectHash) ([]string, error) {
+	blob, err := object.ReadBlob(repoPath, hash)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return []string{}, nil
-		}
 		return nil, err
 	}
 
-	return splitLines(data)
+	return splitLines(blob)
 }
 
 func splitLines(data []byte) ([]string, error) {

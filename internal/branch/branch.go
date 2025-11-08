@@ -28,7 +28,7 @@ func CreateBranch(repoPath, name string) error {
 		return err
 	}
 
-	if len(hash) == 0 {
+	if hash == nil {
 		return errNoCommits
 	}
 
