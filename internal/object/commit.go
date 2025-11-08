@@ -68,8 +68,11 @@ func (c *commit) Timestamp() time.Time {
 }
 
 func ReadCommit(repoPath string, hash ObjectHash) (Commit, error) {
-	data, objType, err := ReadObject(repoPath, hash)
+	data, objType, err := readObject(repoPath, hash)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("hash not found %s", hash)
+		}
 		return nil, err
 	}
 

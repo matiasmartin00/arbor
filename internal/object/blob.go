@@ -38,7 +38,7 @@ func WriteBlob(repoPath string, data []byte) (ObjectHash, error) {
 }
 
 func ReadBlob(repoPath string, hash ObjectHash) (Blob, error) {
-	data, objType, err := ReadObject(repoPath, hash)
+	data, objType, err := readObject(repoPath, hash)
 	if err != nil {
 		return nil, err
 	}

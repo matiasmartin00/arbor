@@ -77,7 +77,7 @@ func writeObject(repoPath string, data []byte, objType ObjectType) (ObjectHash, 
 }
 
 func ReadTree(repoPath string, hash ObjectHash) ([]byte, error) {
-	data, objType, err := ReadObject(repoPath, hash)
+	data, objType, err := readObject(repoPath, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func ReadTree(repoPath string, hash ObjectHash) ([]byte, error) {
 	return data, nil
 }
 
-func ReadObject(repoPath string, hash ObjectHash) ([]byte, ObjectType, error) {
+func readObject(repoPath string, hash ObjectHash) ([]byte, ObjectType, error) {
 	dir := utils.GetObjectsDir(repoPath)
 	objDir := filepath.Join(dir, hash.Dir())
 	file := filepath.Join(objDir, hash.File())
