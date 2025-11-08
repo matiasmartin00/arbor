@@ -41,27 +41,6 @@ func (c *commit) TreeHash() ObjectHash {
 	return c.tree
 }
 
-func buildCommitContent(treeHash ObjectHash, parentHash ObjectHash, message string) []byte {
-	// author
-	user := os.Getenv("USER")
-	if len(user) == 0 {
-		user = "anonymous"
-	}
-	email := fmt.Sprintf("%s@localhost", user)
-	ts := time.Now().Unix()
-
-	// commit content
-	data := fmt.Sprintf("%s %s\n", headerTree, treeHash)
-	if parentHash != nil {
-		data += fmt.Sprintf("%s %s\n", headerParent, parentHash)
-	}
-	data += fmt.Sprintf("%s %s <%s> %d +0000\n", headerAuthor, user, email, ts)
-	data += fmt.Sprintf("%s %s <%s> %d +0000\n\n", headerCommitter, user, email, ts)
-	data += message + "\n"
-
-	return []byte(data)
-}
-
 func (c *commit) ParentHash() ObjectHash {
 	return c.parent
 }
@@ -163,6 +142,27 @@ func parseAuthorCommitterLine(line string) (string, string, time.Time) {
 
 func WriteCommit(repoPath string, treeHash ObjectHash, parentHash ObjectHash, message string) (ObjectHash, error) {
 	return writeObject(repoPath, buildCommitContent(treeHash, parentHash, message), CommitType)
+}
+
+func buildCommitContent(treeHash ObjectHash, parentHash ObjectHash, message string) []byte {
+	// author
+	user := os.Getenv("USER")
+	if len(user) == 0 {
+		user = "anonymous"
+	}
+	email := fmt.Sprintf("%s@localhost", user)
+	ts := time.Now().Unix()
+
+	// commit content
+	data := fmt.Sprintf("%s %s\n", headerTree, treeHash)
+	if parentHash != nil {
+		data += fmt.Sprintf("%s %s\n", headerParent, parentHash)
+	}
+	data += fmt.Sprintf("%s %s <%s> %d +0000\n", headerAuthor, user, email, ts)
+	data += fmt.Sprintf("%s %s <%s> %d +0000\n\n", headerCommitter, user, email, ts)
+	data += message + "\n"
+
+	return []byte(data)
 }
 
 func parseCommitContent(data []byte) (map[string]string, string, error) {

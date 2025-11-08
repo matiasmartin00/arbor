@@ -1,11 +1,9 @@
 package diff
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/matiasmartin00/arbor/internal/index"
 	"github.com/matiasmartin00/arbor/internal/object"
@@ -28,30 +26,7 @@ func readFileContent(repoPath, path string) ([]string, error) {
 		return nil, err
 	}
 
-	return splitLines(data)
-}
-
-func readBlobContent(repoPath string, hash object.ObjectHash) ([]string, error) {
-	blob, err := object.ReadBlob(repoPath, hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return splitLines(blob)
-}
-
-func splitLines(data []byte) ([]string, error) {
-	var out []string
-	scanner := bufio.NewScanner(strings.NewReader(string(data)))
-	for scanner.Scan() {
-		out = append(out, scanner.Text())
-	}
-
-	if scanner.Err() != nil {
-		return []string{}, scanner.Err()
-	}
-
-	return out, nil
+	return object.SplitLines(data)
 }
 
 // unifiedDiff produces a simple unified diff between a and b.
@@ -127,7 +102,12 @@ func DiffWorktreeVsIndex(repoPath string, paths []string) error {
 		}
 
 		// read index content via blob
-		indexLines, err := readBlobContent(repoPath, blobHash)
+		indexBlob, err := object.ReadBlob(repoPath, blobHash)
+		if err != nil {
+			return err
+		}
+
+		indexLines, err := indexBlob.SplitLines()
 		if err != nil {
 			return err
 		}
@@ -188,7 +168,11 @@ func DiffIndexVsHead(repoPath string, paths []string) error {
 		var idxLines, headLines []string
 
 		if ih != nil {
-			idxLines, err = readBlobContent(repoPath, ih)
+			idxBlob, err := object.ReadBlob(repoPath, ih)
+			if err != nil {
+				return err
+			}
+			idxLines, err = idxBlob.SplitLines()
 			if err != nil {
 				return err
 			}
@@ -197,7 +181,11 @@ func DiffIndexVsHead(repoPath string, paths []string) error {
 		}
 
 		if hh != nil {
-			headLines, err = readBlobContent(repoPath, hh)
+			headBlob, err := object.ReadBlob(repoPath, hh)
+			if err != nil {
+				return err
+			}
+			headLines, err = headBlob.SplitLines()
 			if err != nil {
 				return err
 			}
@@ -280,23 +268,29 @@ func DiffCommits(repoPath, commitA, commitB string, paths []string) error {
 		bHash := mapB[p]
 		var aLines, bLines []string
 		if aHash != nil {
-			blob, err := readBlobContent(repoPath, aHash)
+			blob, err := object.ReadBlob(repoPath, aHash)
 			if err != nil {
-				return nil
+				return err
 			}
 
-			aLines = blob
+			aLines, err = blob.SplitLines()
+			if err != nil {
+				return err
+			}
 		} else {
 			aLines = []string{}
 		}
 
 		if bHash != nil {
-			blob, err := readBlobContent(repoPath, bHash)
+			blob, err := object.ReadBlob(repoPath, bHash)
 			if err != nil {
-				return nil
+				return err
 			}
 
-			bLines = blob
+			bLines, err = blob.SplitLines()
+			if err != nil {
+				return err
+			}
 		} else {
 			bLines = []string{}
 		}

@@ -1,7 +1,6 @@
 package merge
 
 import (
-	"bufio"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -123,8 +122,24 @@ func Merge(repoPath, branchName string) error {
 			merged[path] = head // changed only in head
 		default:
 			// conficlt
-			headLines, _ := readBlobContent(repoPath, head)
-			targetLines, _ := readBlobContent(repoPath, target)
+			headBlob, err := object.ReadBlob(repoPath, head)
+			if err != nil {
+				return err
+			}
+			headLines, err := headBlob.SplitLines()
+			if err != nil {
+				return err
+			}
+			
+			targetBlob, err := object.ReadBlob(repoPath, target)
+			if err != nil {
+				return err
+			}
+			targetLines, err := targetBlob.SplitLines()
+			if err != nil {
+				return err
+			}
+
 			content := "<<<<<<< HEAD\n" + strings.Join(headLines, "\n") + "\n=======\n" + strings.Join(targetLines, "\n") + "\n>>>>>>> " + branchName + "\n"
 			tmpFile := filepath.Join(repoPath, path)
 			if err := utils.CreateDir(filepath.Dir(tmpFile)); err != nil {
@@ -138,14 +153,14 @@ func Merge(repoPath, branchName string) error {
 	}
 
 	for p, hash := range merged {
-		data, err := object.ReadBlob(repoPath, hash)
+		blob, err := object.ReadBlob(repoPath, hash)
 		if err != nil {
 			return err
 		}
 		if err := utils.CreateDir(filepath.Dir(p)); err != nil {
 			return err
 		}
-		if err := utils.WriteFile(p, []byte(data)); err != nil {
+		if err := utils.WriteFile(p, blob.Data()); err != nil {
 			return err
 		}
 	}
@@ -241,30 +256,4 @@ func allAncestors(repoPath string, start object.ObjectHash) map[string]object.Ob
 	}
 
 	return m
-}
-
-// it is duplicated with diff, TODO: REFACTOR THIS.
-// readBlobContent returns []string lines for a blob hash or file path.
-// if src looks like a blob hash (40 hex) it reads object; otherwise it treats src as filesystem path.
-func readBlobContent(repoPath string, hash object.ObjectHash) ([]string, error) {
-	blob, err := object.ReadBlob(repoPath, hash)
-	if err != nil {
-		return nil, err
-	}
-
-	return splitLines(blob)
-}
-
-func splitLines(data []byte) ([]string, error) {
-	var out []string
-	scanner := bufio.NewScanner(strings.NewReader(string(data)))
-	for scanner.Scan() {
-		out = append(out, scanner.Text())
-	}
-
-	if scanner.Err() != nil {
-		return []string{}, scanner.Err()
-	}
-
-	return out, nil
 }

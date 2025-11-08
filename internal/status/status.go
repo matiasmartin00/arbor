@@ -17,7 +17,7 @@ func fileBlobHash(path string) (object.ObjectHash, error) {
 	if err != nil {
 		return nil, err
 	}
-	return object.HashBlob(data)
+	return object.NewHashBlob(data)
 }
 
 func Status(repoPath string) error {

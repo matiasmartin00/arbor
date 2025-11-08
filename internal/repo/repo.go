@@ -50,7 +50,7 @@ func EnsureCleanWorktree(repoPath string) error {
 			return err
 		}
 
-		curHash, err := object.HashBlob(data)
+		curHash, err := object.NewHashBlob(data)
 		if err != nil {
 			return err
 		}

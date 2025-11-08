@@ -100,13 +100,13 @@ func applyTree(repoPath string, treeHash object.ObjectHash, basePath string) err
 			}
 
 			// read blob data
-			blobData, err := object.ReadBlob(repoPath, hash)
+			blob, err := object.ReadBlob(repoPath, hash)
 			if err != nil {
 				return err
 			}
 
 			// write file
-			if err := utils.WriteFile(targetPath, blobData); err != nil {
+			if err := utils.WriteFile(targetPath, blob.Data()); err != nil {
 				return err
 			}
 

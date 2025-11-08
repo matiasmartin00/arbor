@@ -47,14 +47,6 @@ func hashObject(data []byte, objType ObjectType) (ObjectHash, error) {
 	return NewObjectHash(hex.EncodeToString(h[:]))
 }
 
-func HashBlob(data []byte) (ObjectHash, error) {
-	return hashObject(data, BlobType)
-}
-
-func WriteBlob(repoPath string, data []byte) (ObjectHash, error) {
-	return writeObject(repoPath, data, BlobType)
-}
-
 func WriteTree(repoPath string, data []byte) (ObjectHash, error) {
 	return writeObject(repoPath, data, TreeType)
 }
@@ -82,18 +74,6 @@ func writeObject(repoPath string, data []byte, objType ObjectType) (ObjectHash, 
 		return nil, err
 	}
 	return hash, nil
-}
-
-func ReadBlob(repoPath string, hash ObjectHash) ([]byte, error) {
-	data, objType, err := ReadObject(repoPath, hash)
-	if err != nil {
-		return nil, err
-	}
-
-	if objType != BlobType {
-		return nil, fmt.Errorf("object %s is not a blob", hash)
-	}
-	return data, nil
 }
 
 func ReadTree(repoPath string, hash ObjectHash) ([]byte, error) {
