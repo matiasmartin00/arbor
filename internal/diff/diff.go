@@ -210,39 +210,13 @@ func DiffIndexVsHead(repoPath string, paths []string) error {
 
 // diffCommits diff two commits by comparings their trees
 func DiffCommits(repoPath, commitA, commitB string, paths []string) error {
-	mapA := map[string]object.ObjectHash{}
-	mapB := map[string]object.ObjectHash{}
-
-	if len(commitA) > 0 {
-		hash, err := object.NewObjectHash(commitA)
-		if err != nil {
-			return err
-		}
-
-		commit, err := object.ReadCommit(repoPath, hash)
-		if err != nil {
-			return err
-		}
-
-		if err := tree.FillPathMapFromTree(repoPath, commit.TreeHash(), "", mapA); err != nil {
-			return err
-		}
+	mapA, err := makeTreePathMap(repoPath, commitA)
+	if err != nil {
+		return err
 	}
-
-	if len(commitB) > 0 {
-		hash, err := object.NewObjectHash(commitB)
-		if err != nil {
-			return err
-		}
-
-		commit, err := object.ReadCommit(repoPath, hash)
-		if err != nil {
-			return err
-		}
-
-		if err := tree.FillPathMapFromTree(repoPath, commit.TreeHash(), "", mapB); err != nil {
-			return err
-		}
+	mapB, err := makeTreePathMap(repoPath, commitB)
+	if err != nil {
+		return err
 	}
 
 	// union of keys
@@ -307,6 +281,30 @@ func DiffCommits(repoPath, commitA, commitB string, paths []string) error {
 	}
 
 	return nil
+}
+
+func makeTreePathMap(repoPath, commitHash string) (map[string]object.ObjectHash, error) {
+	m := map[string]object.ObjectHash{}
+	if len(commitHash) == 0 {
+		return nil, fmt.Errorf("invalid commit '%s'", commitHash)
+	}
+
+	hash, err := object.NewObjectHash(commitHash)
+	if err != nil {
+		return nil, err
+	}
+
+	commit, err := object.ReadCommit(repoPath, hash)
+	if err != nil {
+		return nil, err
+	}
+
+	tree, err := object.ReadTree(repoPath, commit.TreeHash())
+	if err != nil {
+		return nil, err
+	}
+	tree.FillPathMap(m)
+	return m, nil
 }
 
 func equalLines(a, b []string) bool {

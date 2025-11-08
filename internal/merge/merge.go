@@ -10,7 +10,6 @@ import (
 	"github.com/matiasmartin00/arbor/internal/commit"
 	"github.com/matiasmartin00/arbor/internal/object"
 	"github.com/matiasmartin00/arbor/internal/refs"
-	"github.com/matiasmartin00/arbor/internal/tree"
 	"github.com/matiasmartin00/arbor/internal/utils"
 	"github.com/matiasmartin00/arbor/internal/worktree"
 )
@@ -62,9 +61,9 @@ func Merge(repoPath, branchName string) error {
 		return err
 	}
 
-	baseTree := map[string]object.ObjectHash{}
-	headTree := map[string]object.ObjectHash{}
-	targetTree := map[string]object.ObjectHash{}
+	baseTreePathMap := map[string]object.ObjectHash{}
+	headTreePathMap := map[string]object.ObjectHash{}
+	targetTreePathMap := map[string]object.ObjectHash{}
 
 	baseCommit, err := object.ReadCommit(repoPath, baseHash)
 	if err != nil {
@@ -81,37 +80,43 @@ func Merge(repoPath, branchName string) error {
 		return err
 	}
 
-	if err := tree.FillPathMapFromTree(repoPath, baseCommit.TreeHash(), "", baseTree); err != nil {
+	baseTree, err := object.ReadTree(repoPath, baseCommit.TreeHash())
+	if err != nil {
 		return err
 	}
+	baseTree.FillPathMap(baseTreePathMap)
 
-	if err := tree.FillPathMapFromTree(repoPath, headCommit.TreeHash(), "", headTree); err != nil {
+	headTree, err := object.ReadTree(repoPath, headCommit.TreeHash())
+	if err != nil {
 		return err
 	}
+	headTree.FillPathMap(headTreePathMap)
 
-	if err := tree.FillPathMapFromTree(repoPath, targetCommit.TreeHash(), "", targetTree); err != nil {
+	targetTree, err := object.ReadTree(repoPath, targetCommit.TreeHash())
+	if err != nil {
 		return err
 	}
+	targetTree.FillPathMap(targetTreePathMap)
 
 	conflicts := []string{}
 	merged := map[string]object.ObjectHash{}
 
 	// union all paths
 	allPaths := map[string]struct{}{}
-	for p := range baseTree {
+	for p := range baseTreePathMap {
 		allPaths[p] = struct{}{}
 	}
-	for p := range headTree {
+	for p := range headTreePathMap {
 		allPaths[p] = struct{}{}
 	}
-	for p := range targetTree {
+	for p := range targetTreePathMap {
 		allPaths[p] = struct{}{}
 	}
 
 	for path := range allPaths {
-		base := baseTree[path]
-		head := headTree[path]
-		target := targetTree[path]
+		base := baseTreePathMap[path]
+		head := headTreePathMap[path]
+		target := targetTreePathMap[path]
 
 		switch {
 		case head.Equals(target):
@@ -130,7 +135,7 @@ func Merge(repoPath, branchName string) error {
 			if err != nil {
 				return err
 			}
-			
+
 			targetBlob, err := object.ReadBlob(repoPath, target)
 			if err != nil {
 				return err

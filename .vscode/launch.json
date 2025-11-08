@@ -42,8 +42,8 @@
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "diff",
-        "ad68a694708ac638bb747d1aaf3aacd3478cc95e",
-        "90e4a448716d30c483d4395269e01303f5b59b27"
+        "11aaf019e987ef22e593a2b7af51a6b52164ea88",
+        "19e3a80f6490a99674bed0e10705b28fd6bef9d0"
       ],
       "env": {},
       "buildFlags": "",
@@ -74,7 +74,8 @@
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "add",
-        "*.txt"
+        "*.txt",
+        "**/*.txt"
       ],
       "env": {},
       "buildFlags": "",
@@ -155,7 +156,7 @@
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "checkout",
-        "90e4a448716d30c483d4395269e01303f5b59b27"
+        "4bb2f0284a403fddbac6e1638ac6da9264d5b927"
       ],
       "env": {},
       "buildFlags": "",
