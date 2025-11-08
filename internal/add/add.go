@@ -55,8 +55,24 @@ func Add(repoPath string, inputs []string) (map[string]object.ObjectHash, error)
 		}
 
 		relPath = filepath.ToSlash(relPath) // use slash as separator in the index
+
+		curIdxHash, ok := idx[relPath]
+		// if not exists in index, it is a new file
+		if !ok {
+			idx[relPath] = hash
+			added[relPath] = hash
+			return nil
+		}
+
+		// if it is the same, then it don't have changes
+		if curIdxHash.Equals(hash) {
+			return nil
+		}
+
+		// exists but with changes
 		idx[relPath] = hash
 		added[relPath] = hash
+
 		return nil
 	}
 
