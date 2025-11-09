@@ -14,89 +14,94 @@ import (
 	"github.com/matiasmartin00/arbor/internal/worktree"
 )
 
-func Merge(repoPath, branchName string) error {
+type mergeType int
+
+const (
+	fastForward mergeType = iota
+	threeWay
+)
+
+type MergeDetail struct {
+	OriginBranch string
+	TargetBranch string
+	Type         mergeType
+	Conflicts    []string
+	Merged       []string
+	CommitHash   object.ObjectHash
+}
+
+func (mt mergeType) String() string {
+	types := []string{"Fast-Forward", "3-Way"}
+	if mt < 0 || int(mt) >= len(types) {
+		return ""
+	}
+	return types[int(mt)]
+}
+
+func (md MergeDetail) IsFastForward() bool {
+	return md.Type == fastForward
+}
+
+func Merge(repoPath, branchName string) (MergeDetail, error) {
 	currentBranch, err := branch.GetCurrentBranch(repoPath)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
 
 	if branchName == currentBranch {
-		return fmt.Errorf("cannot merge a branch into itself")
+		return MergeDetail{}, fmt.Errorf("cannot merge a branch into itself")
 	}
 
 	headHash, err := refs.GetRefHash(repoPath)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
 
 	targetHash, err := refs.GetRefHashByName(repoPath, branchName)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
 
-	// detect fast-forward
-	ff, err := isAncestorCommit(repoPath, headHash, targetHash)
+	ff, err := tryFastForwardMerge(repoPath, headHash, targetHash)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
 
-	// fast-forward
 	if ff {
-
-		if err := worktree.RestoreCommitWorktree(repoPath, targetHash); err != nil {
-			return err
-		}
-
-		if err := refs.UpdateRef(repoPath, targetHash); err != nil {
-			return err
-		}
-
-		fmt.Printf("Fast-forward merge.\n")
-		return nil
+		return MergeDetail{
+			OriginBranch: branchName,
+			TargetBranch: currentBranch,
+			Type:         fastForward,
+			CommitHash:   targetHash,
+		}, err
 	}
 
-	// otherwise, 3-way merge
+	return threeWayMerge(repoPath, branchName, currentBranch, headHash, targetHash)
+
+}
+
+// otherwise, 3-way merge TODO: Implement rollback
+func threeWayMerge(repoPath, branchName, currentBranch string, headHash, targetHash object.ObjectHash) (MergeDetail, error) {
+
 	baseHash, err := findCommonAncestor(repoPath, headHash, targetHash)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
 
-	baseTreePathMap := map[string]object.ObjectHash{}
-	headTreePathMap := map[string]object.ObjectHash{}
-	targetTreePathMap := map[string]object.ObjectHash{}
-
-	baseCommit, err := object.ReadCommit(repoPath, baseHash)
+	baseTreePathMap, err := buildTreePathMap(repoPath, baseHash)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
 
-	headCommit, err := object.ReadCommit(repoPath, headHash)
+	headTreePathMap, err := buildTreePathMap(repoPath, headHash)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
 
-	targetCommit, err := object.ReadCommit(repoPath, targetHash)
+	targetTreePathMap, err := buildTreePathMap(repoPath, targetHash)
 	if err != nil {
-		return err
+		return MergeDetail{}, err
 	}
-
-	baseTree, err := object.ReadTree(repoPath, baseCommit.TreeHash())
-	if err != nil {
-		return err
-	}
-	baseTree.FillPathMap(baseTreePathMap)
-
-	headTree, err := object.ReadTree(repoPath, headCommit.TreeHash())
-	if err != nil {
-		return err
-	}
-	headTree.FillPathMap(headTreePathMap)
-
-	targetTree, err := object.ReadTree(repoPath, targetCommit.TreeHash())
-	if err != nil {
-		return err
-	}
-	targetTree.FillPathMap(targetTreePathMap)
 
 	conflicts := []string{}
 	merged := map[string]object.ObjectHash{}
@@ -127,36 +132,75 @@ func Merge(repoPath, branchName string) error {
 			merged[path] = head // changed only in head
 		default:
 			// conficlt
-			headBlob, err := object.ReadBlob(repoPath, head)
-			if err != nil {
-				return err
-			}
-			headLines, err := headBlob.SplitLines()
-			if err != nil {
-				return err
-			}
-
-			targetBlob, err := object.ReadBlob(repoPath, target)
-			if err != nil {
-				return err
-			}
-			targetLines, err := targetBlob.SplitLines()
-			if err != nil {
-				return err
-			}
-
-			content := "<<<<<<< HEAD\n" + strings.Join(headLines, "\n") + "\n=======\n" + strings.Join(targetLines, "\n") + "\n>>>>>>> " + branchName + "\n"
-			tmpFile := filepath.Join(repoPath, path)
-			if err := utils.CreateDir(filepath.Dir(tmpFile)); err != nil {
-				return err
-			}
-			if err := utils.WriteFile(tmpFile, []byte(content)); err != nil {
-				return err
-			}
+			writeConflictFile(repoPath, path, branchName, head, target)
 			conflicts = append(conflicts, path)
 		}
 	}
 
+	// write merged files
+	err = writeMergedFiles(repoPath, merged)
+	if err != nil {
+		return MergeDetail{}, nil
+	}
+
+	// add to stage area merged and conflict files
+	add.Add(repoPath, []string{"."})
+
+	mergedFiles := make([]string, 0, len(merged))
+	for k, _ := range merged {
+		mergedFiles = append(mergedFiles, k)
+	}
+
+	// if we have conflicts don't auto commit
+	if len(conflicts) > 0 {
+		return MergeDetail{
+			Type:      threeWay,
+			Conflicts: conflicts,
+			Merged:    mergedFiles,
+		}, nil
+	}
+
+	// auto commit merge
+	msg := fmt.Sprintf("Merge branch '%s' into '%s'", branchName, currentBranch)
+	mergeHash, err := commit.Commit(repoPath, msg)
+	if err != nil {
+		return MergeDetail{}, err
+	}
+	return MergeDetail{
+		OriginBranch: branchName,
+		TargetBranch: currentBranch,
+		Type:         threeWay,
+		Conflicts:    conflicts,
+		Merged:       mergedFiles,
+		CommitHash:   mergeHash,
+	}, nil
+}
+
+// fast-forward TODO: impl rollback
+func tryFastForwardMerge(repoPath string, headHash, targetHash object.ObjectHash) (bool, error) {
+
+	// detect fast-forward
+	ff, err := isAncestorCommit(repoPath, headHash, targetHash)
+	if err != nil {
+		return false, err
+	}
+
+	if !ff {
+		return false, nil
+	}
+
+	if err := worktree.RestoreCommitWorktree(repoPath, targetHash); err != nil {
+		return false, err
+	}
+
+	if err := refs.UpdateRef(repoPath, targetHash); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func writeMergedFiles(repoPath string, merged map[string]object.ObjectHash) error {
 	for p, hash := range merged {
 		blob, err := object.ReadBlob(repoPath, hash)
 		if err != nil {
@@ -170,25 +214,58 @@ func Merge(repoPath, branchName string) error {
 		}
 	}
 
-	add.Add(repoPath, []string{"."})
+	return nil
+}
 
-	if len(conflicts) > 0 {
-		fmt.Println("Merge completed with conflicts:")
-		for _, c := range conflicts {
-			fmt.Println(" -", c)
-		}
-		fmt.Println("Resolve conflicts and run `arbor commit ...` to finalize merge")
-		return nil
-	}
+func writeConflictFile(repoPath, path, branchName string, head, target object.ObjectHash) error {
 
-	// auto commit merge
-	msg := fmt.Sprintf("Merge branch '%s' into '%s'", branchName, currentBranch)
-	mergeHash, err := commit.Commit(repoPath, msg)
+	// conficlt
+	headBlob, err := object.ReadBlob(repoPath, head)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Merge commit created:", mergeHash)
+	headLines, err := headBlob.SplitLines()
+	if err != nil {
+		return err
+	}
+
+	targetBlob, err := object.ReadBlob(repoPath, target)
+	if err != nil {
+		return err
+	}
+	targetLines, err := targetBlob.SplitLines()
+	if err != nil {
+		return err
+	}
+
+	content := "<<<<<<< HEAD\n" + strings.Join(headLines, "\n") + "\n=======\n" + strings.Join(targetLines, "\n") + "\n>>>>>>> " + branchName + "\n"
+	tmpFile := filepath.Join(repoPath, path)
+	if err := utils.CreateDir(filepath.Dir(tmpFile)); err != nil {
+		return err
+	}
+	if err := utils.WriteFile(tmpFile, []byte(content)); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func buildTreePathMap(repoPath string, commitHash object.ObjectHash) (map[string]object.ObjectHash, error) {
+	treePathMap := map[string]object.ObjectHash{}
+
+	commit, err := object.ReadCommit(repoPath, commitHash)
+	if err != nil {
+		return nil, err
+	}
+
+	tree, err := object.ReadTree(repoPath, commit.TreeHash())
+	if err != nil {
+		return nil, err
+	}
+
+	tree.FillPathMap(treePathMap)
+
+	return treePathMap, nil
 }
 
 func isAncestorCommit(repoPath string, maybeAncestor, targetHash object.ObjectHash) (bool, error) {

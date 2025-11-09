@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/matiasmartin00/arbor/internal/diff"
 	"github.com/spf13/cobra"
@@ -22,35 +21,56 @@ func NewDiffCommand() *cobra.Command {
 					`,
 		Args:    cobra.ArbitraryArgs,
 		PreRunE: preRunErr,
-		Run: func(c *cobra.Command, args []string) {
+		RunE: func(c *cobra.Command, args []string) error {
 
 			// if commits present -> diff commits
 			if len(args) >= 2 {
-				if err := diff.DiffCommits(repoPath, args[0], args[1], paths); err != nil {
-					fmt.Println("Error:", err)
-					os.Exit(1)
+				diffResult, err := diff.DiffCommits(repoPath, args[0], args[1], paths)
+				if err != nil {
+					return err
 				}
-				return
+				printResult(fmt.Sprintf("commit %s -> %s", args[0], args[1]), diffResult)
+				return nil
 			}
 
 			// staged mode
 			if staged {
-				if err := diff.DiffIndexVsHead(repoPath, paths); err != nil {
-					fmt.Println("Error:", err)
-					os.Exit(1)
+				diffResults, err := diff.DiffIndexVsHead(repoPath, paths)
+				if err != nil {
+					return err
 				}
-				return
+				printResult("index vs HEAD", diffResults)
+				return nil
 			}
 
 			// default: workdir vs index
-			if err := diff.DiffWorktreeVsIndex(repoPath, paths); err != nil {
-				fmt.Println("Error:", err)
-				os.Exit(1)
+			diffResult, err := diff.DiffWorktreeVsIndex(repoPath, paths)
+			if err != nil {
+				return err
 			}
+
+			printResult("workdir vs index", diffResult)
+
+			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&staged, "staged", false, "Show diff between index and HEAD (staged changes)")
 	cmd.Flags().StringSliceVar(&paths, "paths", []string{}, "You can pass paths to limit to specific files")
 	return cmd
+}
+
+func printResult(difference string, diffResult []diff.DiffResult) {
+	for _, dr := range diffResult {
+		fmt.Printf("diff -- a/%s b/%s (%s)\n", dr.File, dr.File, difference)
+		if dr.AHash != nil && dr.BHash != nil {
+			fmt.Printf("index -- %s vs %s\n", dr.AHash, dr.BHash)
+		} else {
+			fmt.Printf("index -- %s\n", dr.AHash)
+		}
+		for _, ld := range dr.Lines {
+			fmt.Printf("%s%s\n", ld.Result, ld.ResultLine)
+		}
+		fmt.Printf("\n\n")
+	}
 }

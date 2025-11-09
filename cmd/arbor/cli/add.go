@@ -20,8 +20,12 @@ func NewAddCommand() *cobra.Command {
 				return err
 			}
 
-			for p, h := range added {
-				fmt.Printf("Added %s with hash %s\n", p, h)
+			if len(added) == 0 {
+				fmt.Printf("Nothing pending!\n")
+			}
+
+			for _, ad := range added {
+				fmt.Printf("Added %s with hash %s\n", ad.Path, ad.Hash)
 			}
 
 			return nil

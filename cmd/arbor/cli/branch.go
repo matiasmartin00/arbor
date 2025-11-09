@@ -42,7 +42,11 @@ func NewBranchCommand() *cobra.Command {
 
 			fmt.Println("Branches:")
 			for _, b := range branches {
-				fmt.Println(" -", b)
+				if b.IsActive {
+					fmt.Printf(" * %s\n", b.Name)
+					continue
+				}
+				fmt.Printf("   %s\n", b.Name)
 			}
 
 			return nil

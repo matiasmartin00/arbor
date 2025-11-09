@@ -42,8 +42,8 @@
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "diff",
-        "11aaf019e987ef22e593a2b7af51a6b52164ea88",
-        "19e3a80f6490a99674bed0e10705b28fd6bef9d0"
+        "5d75d2f1597559bd20bbfd5da4efc69fe119d5a1",
+        "62f1a92fc949f91d82f81178b986e046e1a7aee5"
       ],
       "env": {},
       "buildFlags": "",
@@ -59,6 +59,22 @@
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "diff"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
+      "name": "Diff staged",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "diff",
+        "--staged"
       ],
       "env": {},
       "buildFlags": "",
@@ -93,6 +109,40 @@
         "commit",
         "-m",
         "my test commit"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
+      "name": "Logs from commit",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "log",
+        "--from",
+        "62f1a92fc949f91d82f81178b986e046e1a7aee5"
+      ],
+      "env": {},
+      "buildFlags": "",
+      "dlvFlags": [
+        "--check-go-version=false"
+      ]
+    },
+    {
+      "name": "Logs limit 2",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/arbor",
+      "args": [
+        "log",
+        "--limit",
+        "2"
       ],
       "env": {},
       "buildFlags": "",

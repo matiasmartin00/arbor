@@ -12,6 +12,12 @@ import (
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
+type StatusDetail struct {
+	ToBeCommitted []string
+	NotStaged     []string
+	Untracked     []string
+}
+
 func fileBlobHash(path string) (object.ObjectHash, error) {
 	data, err := utils.ReadFile(path)
 	if err != nil {
@@ -20,17 +26,17 @@ func fileBlobHash(path string) (object.ObjectHash, error) {
 	return object.NewHashBlob(data)
 }
 
-func Status(repoPath string) error {
+func Status(repoPath string) (StatusDetail, error) {
 
 	idx, err := index.Load(repoPath)
 	if err != nil {
-		return err
+		return StatusDetail{}, err
 	}
 
 	// headMap files
 	headMap, err := tree.GetHeadTreeMap(repoPath)
 	if err != nil {
-		return err
+		return StatusDetail{}, err
 	}
 
 	// changes to be committed: index vs head tree
@@ -62,12 +68,12 @@ func Status(repoPath string) error {
 				notStaged = append(notStaged, fmt.Sprintf("deleted: %s"))
 				continue
 			}
-			return err
+			return StatusDetail{}, err
 		}
 
 		curHash, err := fileBlobHash(p)
 		if err != nil {
-			return err
+			return StatusDetail{}, err
 		}
 
 		if curHash.NotEquals(ih) {
@@ -102,37 +108,12 @@ func Status(repoPath string) error {
 	})
 
 	if err != nil {
-		return err
+		return StatusDetail{}, err
 	}
 
-	if len(toBeCommitted) == 0 {
-		fmt.Println("No changes to be committed.")
-	} else {
-		fmt.Println("Changes to be commited: ")
-		for _, l := range toBeCommitted {
-			fmt.Printf("  %s\n", l)
-		}
-	}
-	fmt.Printf("\n\n")
-
-	if len(notStaged) == 0 {
-		fmt.Println("No changes not staged for commit.")
-	} else {
-		fmt.Println("Changes not staged for commit: ")
-		for _, l := range notStaged {
-			fmt.Printf("  %s\n", l)
-		}
-	}
-	fmt.Printf("\n\n")
-
-	if len(untracked) == 0 {
-		fmt.Println("No untracked files.")
-	} else {
-		fmt.Println("Untracked files: ")
-		for _, u := range untracked {
-			fmt.Printf("  %s\n", u)
-		}
-	}
-
-	return nil
+	return StatusDetail{
+		ToBeCommitted: toBeCommitted,
+		NotStaged:     notStaged,
+		Untracked:     untracked,
+	}, nil
 }

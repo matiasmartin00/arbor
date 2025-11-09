@@ -10,9 +10,14 @@ import (
 	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
+type AddResult struct {
+	Hash object.ObjectHash
+	Path string
+}
+
 // add paths one or more files to the index
 // returns thepath->blobHash of the added files
-func Add(repoPath string, inputs []string) (map[string]object.ObjectHash, error) {
+func Add(repoPath string, inputs []string) ([]AddResult, error) {
 	added := make(map[string]object.ObjectHash)
 	idx, err := index.Load(repoPath)
 	if err != nil {
@@ -154,5 +159,16 @@ func Add(repoPath string, inputs []string) (map[string]object.ObjectHash, error)
 		return nil, err
 	}
 
-	return added, nil
+	return toAddResult(added), nil
+}
+
+func toAddResult(added map[string]object.ObjectHash) []AddResult {
+	r := make([]AddResult, 0, len(added))
+	for p, h := range added {
+		r = append(r, AddResult{
+			Hash: h,
+			Path: p,
+		})
+	}
+	return r
 }

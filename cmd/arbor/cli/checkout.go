@@ -19,7 +19,7 @@ func NewCheckoutCommand() *cobra.Command {
 				return err
 			}
 
-			fmt.Println("Checked out to", args[0])
+			fmt.Printf("Checked out to %s\n", args[0])
 			return nil
 		},
 	}

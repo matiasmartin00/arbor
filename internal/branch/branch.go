@@ -17,6 +17,11 @@ var (
 	errNoCommits         = fmt.Errorf("no commits yet")
 )
 
+type BranchData struct {
+	Name     string
+	IsActive bool
+}
+
 func CreateBranch(repoPath, name string) error {
 	if strings.Contains(name, "/") {
 		return errInvalidBranchName
@@ -46,10 +51,10 @@ func CreateBranch(repoPath, name string) error {
 }
 
 // listBranches returns a list of branch names and mark the current one with '*'
-func ListBranches(repoPath string) ([]string, error) {
+func ListBranches(repoPath string) ([]BranchData, error) {
 	refsDir := utils.GetRefsDir(repoPath)
 
-	var branches []string
+	var branches []BranchData
 	err := filepath.WalkDir(refsDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -63,7 +68,10 @@ func ListBranches(repoPath string) ([]string, error) {
 		}
 
 		rel, _ := filepath.Rel(refsDir, path)
-		branches = append(branches, filepath.ToSlash(rel))
+		branches = append(branches, BranchData{
+			Name:     filepath.ToSlash(rel),
+			IsActive: false,
+		})
 		return nil
 	})
 
@@ -77,8 +85,8 @@ func ListBranches(repoPath string) ([]string, error) {
 	}
 
 	for i, b := range branches {
-		if b == current {
-			branches[i] = "* " + b
+		if b.Name == current {
+			branches[i].IsActive = true
 		}
 	}
 

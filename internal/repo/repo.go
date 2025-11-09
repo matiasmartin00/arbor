@@ -11,7 +11,6 @@ import (
 )
 
 func Init(path string) error {
-	fmt.Println("Initializing repository at", path)
 	dirs := []string{
 		utils.GetObjectsDir(path),
 		utils.GetRefsDir(path),
