@@ -48,6 +48,19 @@ func ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
+func IsBinary(data []byte) bool {
+    n := len(data)
+    if n > 8000 {
+        n = 8000 // limit
+    }
+    for _, b := range data[:n] {
+        if b == 0 {
+            return true
+        }
+    }
+    return false
+}
+
 func RemoveFile(path string) error {
 	if _, err := os.Stat(path); err == nil {
 		if err := os.Remove(path); err != nil {

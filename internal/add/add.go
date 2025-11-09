@@ -7,7 +7,6 @@ import (
 
 	"github.com/matiasmartin00/arbor/internal/index"
 	"github.com/matiasmartin00/arbor/internal/object"
-	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
 type AddResult struct {
@@ -43,12 +42,7 @@ func Add(repoPath string, inputs []string) ([]AddResult, error) {
 			return nil
 		}
 
-		data, err := utils.ReadFile(filePath)
-		if err != nil {
-			return err
-		}
-
-		hash, err := object.WriteBlob(repoPath, data)
+		hash, err := object.WriteBlob(repoPath, filePath)
 		if err != nil {
 			return err
 		}
@@ -61,21 +55,21 @@ func Add(repoPath string, inputs []string) ([]AddResult, error) {
 
 		relPath = filepath.ToSlash(relPath) // use slash as separator in the index
 
-		curIdxHash, ok := idx[relPath]
+		curIdxEntry, ok := idx[relPath]
 		// if not exists in index, it is a new file
 		if !ok {
-			idx[relPath] = hash
+			idx.AddEntry(relPath, hash)
 			added[relPath] = hash
 			return nil
 		}
 
 		// if it is the same, then it don't have changes
-		if curIdxHash.Equals(hash) {
+		if curIdxEntry.Hash.Equals(hash) {
 			return nil
 		}
 
 		// exists but with changes
-		idx[relPath] = hash
+		idx.AddEntry(relPath, hash)
 		added[relPath] = hash
 
 		return nil

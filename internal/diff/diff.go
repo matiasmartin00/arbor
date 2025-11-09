@@ -63,7 +63,7 @@ func DiffWorktreeVsIndex(repoPath string, paths []string) ([]DiffResult, error) 
 	targets := pathsToTargetMap(paths)
 
 	diffResult := []DiffResult{}
-	for p, blobHash := range idx {
+	for p, ie := range idx {
 		// if paths filter given, skip others
 		if len(targets) > 0 {
 			if _, ok := targets[p]; !ok {
@@ -71,8 +71,31 @@ func DiffWorktreeVsIndex(repoPath string, paths []string) ([]DiffResult, error) 
 			}
 		}
 
+		// if file is a binary don't compare lines, just checks hashes
+		if ie.IsBinary {
+			workPath := filepath.FromSlash(p)
+			data, err := utils.ReadFile(workPath)
+			if err != nil {
+				return nil, err
+			}
+			workHash, err := object.NewHashBlob(data)
+
+			if workHash.Equals(ie.Hash) {
+				continue
+			}
+
+			diffResult = append(diffResult, DiffResult{
+				File:  p,
+				AHash: ie.Hash,
+				BHash: workHash,
+				Lines: nil,
+			})
+
+			continue
+		}
+
 		// read index content via blob
-		indexBlob, err := object.ReadBlob(repoPath, blobHash)
+		indexBlob, err := object.ReadBlob(repoPath, ie.Hash)
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +117,7 @@ func DiffWorktreeVsIndex(repoPath string, paths []string) ([]DiffResult, error) 
 
 		diffResult = append(diffResult, DiffResult{
 			File:  p,
-			AHash: blobHash,
+			AHash: ie.Hash,
 			BHash: nil,
 			Lines: unifiedDiff(indexLines, workLines),
 		})
@@ -140,8 +163,23 @@ func DiffIndexVsHead(repoPath string, paths []string) ([]DiffResult, error) {
 
 		var idxLines, headLines []string
 
-		if ih != nil {
-			idxBlob, err := object.ReadBlob(repoPath, ih)
+		// if file is a binary don't compare lines, just checks hashes
+		if ih.IsBinary {
+			if ih.Hash.Equals(hh) {
+				continue
+			}
+
+			diffResult = append(diffResult, DiffResult{
+				File:  p,
+				AHash: hh,
+				BHash: ih.Hash,
+				Lines: nil,
+			})
+			continue
+		}
+
+		if ih.Hash != nil {
+			idxBlob, err := object.ReadBlob(repoPath, ih.Hash)
 			if err != nil {
 				return nil, err
 			}
@@ -173,7 +211,7 @@ func DiffIndexVsHead(repoPath string, paths []string) ([]DiffResult, error) {
 		diffResult = append(diffResult, DiffResult{
 			File:  p,
 			AHash: hh,
-			BHash: ih,
+			BHash: ih.Hash,
 			Lines: unifiedDiff(headLines, idxLines),
 		})
 	}
@@ -221,6 +259,20 @@ func DiffCommits(repoPath, commitA, commitB string, paths []string) ([]DiffResul
 				return nil, err
 			}
 
+			if utils.IsBinary(blob.Data()) {
+				if aHash.Equals(bHash) {
+					continue
+				}
+
+				diffResult = append(diffResult, DiffResult{
+					File:  p,
+					AHash: aHash,
+					BHash: bHash,
+					Lines: nil,
+				})
+				continue
+			}
+
 			aLines, err = blob.SplitLines()
 			if err != nil {
 				return nil, err
@@ -233,6 +285,20 @@ func DiffCommits(repoPath, commitA, commitB string, paths []string) ([]DiffResul
 			blob, err := object.ReadBlob(repoPath, bHash)
 			if err != nil {
 				return nil, err
+			}
+
+			if utils.IsBinary(blob.Data()) {
+				if bHash.Equals(aHash) {
+					continue
+				}
+
+				diffResult = append(diffResult, DiffResult{
+					File:  p,
+					AHash: aHash,
+					BHash: bHash,
+					Lines: nil,
+				})
+				continue
 			}
 
 			bLines, err = blob.SplitLines()

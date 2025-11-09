@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"strings"
+
+	"github.com/matiasmartin00/arbor/internal/utils"
 )
 
 type Blob interface {
@@ -33,7 +35,12 @@ func (b *blob) SplitLines() ([]string, error) {
 	return SplitLines(b.data)
 }
 
-func WriteBlob(repoPath string, data []byte) (ObjectHash, error) {
+func WriteBlob(repoPath, filePath string) (ObjectHash, error) {
+	data, err := utils.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
 	return writeObject(repoPath, data, BlobType)
 }
 

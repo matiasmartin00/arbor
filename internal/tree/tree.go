@@ -16,8 +16,8 @@ func WriteTree(repoPath string) (object.ObjectHash, error) {
 
 	// build a map of path -> hash
 	entries := make(map[string]object.ObjectHash, len(idx))
-	for p, h := range idx {
-		entries[filepath.ToSlash(p)] = h
+	for p, ie := range idx {
+		entries[filepath.ToSlash(p)] = ie.Hash
 	}
 
 	return object.WriteTree(repoPath, entries)

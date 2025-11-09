@@ -41,14 +41,14 @@ func Status(repoPath string) (StatusDetail, error) {
 
 	// changes to be committed: index vs head tree
 	toBeCommitted := []string{}
-	for p, ih := range idx {
+	for p, ie := range idx {
 		hh, ok := headMap[p]
 		if !ok {
 			toBeCommitted = append(toBeCommitted, fmt.Sprintf("new file: %s", p))
 			continue
 		}
 
-		if ih.NotEquals(hh) {
+		if ie.Hash.NotEquals(hh) {
 			toBeCommitted = append(toBeCommitted, fmt.Sprintf("modified: %s", p))
 		}
 	}
@@ -62,7 +62,7 @@ func Status(repoPath string) (StatusDetail, error) {
 
 	// changes not staged for commit: workdir vs index
 	notStaged := []string{}
-	for p, ih := range idx {
+	for p, ie := range idx {
 		if _, err := os.Stat(p); err != nil {
 			if os.IsNotExist(err) {
 				notStaged = append(notStaged, fmt.Sprintf("deleted: %s"))
@@ -76,7 +76,7 @@ func Status(repoPath string) (StatusDetail, error) {
 			return StatusDetail{}, err
 		}
 
-		if curHash.NotEquals(ih) {
+		if curHash.NotEquals(ie.Hash) {
 			notStaged = append(notStaged, fmt.Sprintf("modified: %s", p))
 		}
 	}

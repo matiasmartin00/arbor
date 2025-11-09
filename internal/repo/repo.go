@@ -54,7 +54,7 @@ func EnsureCleanWorktree(repoPath string) error {
 			return err
 		}
 
-		if curHash.NotEquals(h) {
+		if curHash.NotEquals(h.Hash) {
 			return fmt.Errorf("uncommitted changes: file %s has been modified (not committed or staged)", p)
 		}
 	}

@@ -1,6 +1,7 @@
 package object
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -75,4 +76,12 @@ func (h objectHash) Dir() string {
 func (h objectHash) File() string {
 	s := h.String()
 	return s[2:]
+}
+
+func (h objectHash) MarshalJSON() ([]byte, error) {
+	return json.Marshal(h.val)
+}
+
+func (h *objectHash) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &h.val)
 }

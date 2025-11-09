@@ -37,27 +37,27 @@ func RestoreCommitWorktree(repoPath string, commitHash object.ObjectHash) error 
 	tree.FillPathMap(treeMap)
 
 	// remove tracked that are in the index but not in the tree
-	index, err := index.Load(repoPath)
+	idx, err := index.Load(repoPath)
 	if err != nil {
 		return err
 	}
 
-	for path := range index {
+	for path := range idx {
 		if _, ok := treeMap[path]; !ok {
 			// file is in index but not in tree, remove it
 			if err := utils.RemoveFile(path); err != nil {
 				return err
 			}
-			delete(index, path)
+			delete(idx, path)
 		}
 	}
 
 	// update index to match tree
 	for path, hash := range treeMap {
-		index[path] = hash
+		idx.AddEntry(path, hash)
 	}
 
-	if err := index.Save(repoPath); err != nil {
+	if err := idx.Save(repoPath); err != nil {
 		return err
 	}
 
@@ -88,7 +88,6 @@ func applyTree(repoPath string, tree object.Tree) error {
 	}
 
 	for _, st := range tree.SubTrees() {
-		//targetPath := filepath.FromSlash(filepath.Join(basePath, st.Basepath()))
 		// create directory and recurse
 		if err := utils.CreateDir(st.Basepath()); err != nil {
 			return err

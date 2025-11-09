@@ -65,9 +65,18 @@ func printResult(difference string, diffResult []diff.DiffResult) {
 		fmt.Printf("diff -- a/%s b/%s (%s)\n", dr.File, dr.File, difference)
 		if dr.AHash != nil && dr.BHash != nil {
 			fmt.Printf("index -- %s vs %s\n", dr.AHash, dr.BHash)
-		} else {
+		} else if dr.AHash != nil {
 			fmt.Printf("index -- %s\n", dr.AHash)
+		} else {
+			fmt.Printf("index -- %s\n", dr.BHash)
 		}
+
+		if dr.Lines == nil {
+			fmt.Printf("Binary file\n")
+			fmt.Printf("\n\n")
+			continue
+		}
+
 		for _, ld := range dr.Lines {
 			fmt.Printf("%s%s\n", ld.Result, ld.ResultLine)
 		}
