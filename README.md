@@ -32,11 +32,14 @@ arbor init
 ### Add files to the staging area
 ```bash
 arbor add file1.txt file2.txt
+arbor add .
+arbor add *.txt **/*.txt
 ```
 
 ### Create a commit
 ```bash
 arbor commit -m "your message"
+arbor commit --message "your message"
 ```
 
 ### View commit history
@@ -103,6 +106,6 @@ arbor merge dev
 
 ## Roadmap
 Planned improvements and features:
-- Code refactor and internal structure cleanup  
 - `tag` — lightweight and annotated tags  
+- Colored console
 - `remote`, `push`, `pull` — distributed synchronization  
