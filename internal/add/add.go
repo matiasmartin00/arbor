@@ -10,13 +10,14 @@ import (
 )
 
 type AddResult struct {
-	Hash object.ObjectHash
-	Path string
+	Hash      object.ObjectHash
+	Path      string
+	IsDeleted bool
 }
 
 // add paths one or more files to the index
 // returns thepath->blobHash of the added files
-func Add(repoPath string, inputs []string) ([]AddResult, error) {
+func Add(repoPath string, deleted bool, inputs []string) ([]AddResult, error) {
 	added := make(map[string]object.ObjectHash)
 	idx, err := index.Load(repoPath)
 	if err != nil {
@@ -149,6 +150,10 @@ func Add(repoPath string, inputs []string) ([]AddResult, error) {
 		}
 	}
 
+	if deleted {
+		stageDeleted(idx, added)
+	}
+
 	if err := idx.Save(repoPath); err != nil {
 		return nil, err
 	}
@@ -156,12 +161,22 @@ func Add(repoPath string, inputs []string) ([]AddResult, error) {
 	return toAddResult(added), nil
 }
 
+func stageDeleted(idx index.Index, added map[string]object.ObjectHash) {
+	for p := range idx {
+		if _, err := os.Stat(p); os.IsNotExist(err) {
+			idx.Remove(p)
+			added[p] = nil
+		}
+	}
+}
+
 func toAddResult(added map[string]object.ObjectHash) []AddResult {
 	r := make([]AddResult, 0, len(added))
 	for p, h := range added {
 		r = append(r, AddResult{
-			Hash: h,
-			Path: p,
+			Hash:      h,
+			Path:      p,
+			IsDeleted: h == nil,
 		})
 	}
 	return r

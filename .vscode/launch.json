@@ -91,7 +91,8 @@
       "args": [
         "add",
         "*.txt",
-        "**/*.txt"
+        "**/*.txt",
+        "--d"
       ],
       "env": {},
       "buildFlags": "",
@@ -206,7 +207,7 @@
       "program": "${workspaceFolder}/cmd/arbor",
       "args": [
         "checkout",
-        "4bb2f0284a403fddbac6e1638ac6da9264d5b927"
+        "f6ceb2f01a4a749d6fb794dcffe9e87818d8cb9f"
       ],
       "env": {},
       "buildFlags": "",

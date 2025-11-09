@@ -8,6 +8,7 @@ import (
 )
 
 func NewAddCommand() *cobra.Command {
+	var stageDeleted bool
 	cmd := &cobra.Command{
 		Use:     "add <files...>",
 		Short:   "Add files to the staging area",
@@ -15,7 +16,7 @@ func NewAddCommand() *cobra.Command {
 		PreRunE: preRunErr,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			added, err := add.Add(repoPath, args)
+			added, err := add.Add(repoPath, stageDeleted, args)
 			if err != nil {
 				return err
 			}
@@ -25,6 +26,10 @@ func NewAddCommand() *cobra.Command {
 			}
 
 			for _, ad := range added {
+				if ad.IsDeleted {
+					fmt.Printf("Removed %s\n", ad.Path)
+					continue
+				}
 				fmt.Printf("Added %s with hash %s\n", ad.Path, ad.Hash)
 			}
 
@@ -32,5 +37,6 @@ func NewAddCommand() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().BoolVarP(&stageDeleted, "deletions", "d", false, "Stage deletions")
 	return cmd
 }

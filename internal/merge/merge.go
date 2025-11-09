@@ -144,7 +144,7 @@ func threeWayMerge(repoPath, branchName, currentBranch string, headHash, targetH
 	}
 
 	// add to stage area merged and conflict files
-	add.Add(repoPath, []string{"."})
+	add.Add(repoPath, true, []string{"."})
 
 	mergedFiles := make([]string, 0, len(merged))
 	for k, _ := range merged {

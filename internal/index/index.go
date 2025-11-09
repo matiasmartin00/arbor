@@ -45,11 +45,19 @@ func (idx Index) Save(repoPath string) error {
 }
 
 func (idx Index) AddEntry(path string, hash object.ObjectHash) {
-	blob, _ := object.ReadBlob(".", hash)
+	blob, _ := object.ReadBlob(".", hash) // TODO: pending to change....
 	idx[path] = indexEntry{
 		Hash:     hash,
 		IsBinary: utils.IsBinary(blob.Data()),
 	}
+}
+
+func (idx Index) Remove(path string) {
+	_, ok := idx[path]
+	if !ok {
+		return
+	}
+	delete(idx, path)
 }
 
 type indexEntryJSON struct {

@@ -40,7 +40,7 @@ func EnsureCleanWorktree(repoPath string) error {
 		return err
 	}
 
-	for p, h := range index {
+	for p, ie := range index {
 		data, err := utils.ReadFile(p)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -54,7 +54,7 @@ func EnsureCleanWorktree(repoPath string) error {
 			return err
 		}
 
-		if curHash.NotEquals(h.Hash) {
+		if curHash.NotEquals(ie.Hash) {
 			return fmt.Errorf("uncommitted changes: file %s has been modified (not committed or staged)", p)
 		}
 	}
