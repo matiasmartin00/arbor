@@ -55,8 +55,8 @@ func NewDiffCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&staged, "staged", false, "Show diff between index and HEAD (staged changes)")
-	cmd.Flags().StringSliceVar(&paths, "paths", []string{}, "You can pass paths to limit to specific files")
+	cmd.Flags().BoolVarP(&staged, "staged", "s", false, "Show diff between index and HEAD (staged changes)")
+	cmd.Flags().StringSliceVarP(&paths, "paths", "p", []string{}, "You can pass paths to limit to specific files")
 	return cmd
 }
 

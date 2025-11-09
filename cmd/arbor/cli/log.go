@@ -44,7 +44,7 @@ func NewLogCommand() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&limit, "limit", 5, "You can set a limit to restrict the number of commits")
-	cmd.Flags().StringVar(&from, "from", "", "You can pass commitHash to start from the same one")
+	cmd.Flags().IntVarP(&limit, "limit", "l", 5, "You can set a limit to restrict the number of commits")
+	cmd.Flags().StringVarP(&from, "from", "f", "", "You can pass commitHash to start from the same one")
 	return cmd
 }
